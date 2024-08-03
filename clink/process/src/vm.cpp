@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -7,8 +7,8 @@
 #include <Windows.h>
 
 //------------------------------------------------------------------------------
-static unsigned int g_alloc_granularity = 0;
-static unsigned int g_page_size         = 0;
+static uint32 g_alloc_granularity = 0;
+static uint32 g_page_size         = 0;
 
 //------------------------------------------------------------------------------
 static void initialise_page_constants()
@@ -20,48 +20,48 @@ static void initialise_page_constants()
 }
 
 //------------------------------------------------------------------------------
-static unsigned int to_access_flags(unsigned int ms_flags)
+static uint32 to_access_flags(uint32 ms_flags)
 {
-    unsigned int ret = 0;
-    if (ms_flags & 0x22) ret |= vm::access_read;
-    if (ms_flags & 0x44) ret |= vm::access_write|vm::access_read;
-    if (ms_flags & 0x88) ret |= vm::access_cow|vm::access_write|vm::access_read;
-    if (ms_flags & 0xf0) ret |= vm::access_execute;
+    uint32 ret = 0;
+    if (ms_flags & 0x22) ret |= Vm::access_read;
+    if (ms_flags & 0x44) ret |= Vm::access_write|Vm::access_read;
+    if (ms_flags & 0x88) ret |= Vm::access_cow|Vm::access_write|Vm::access_read;
+    if (ms_flags & 0xf0) ret |= Vm::access_execute;
     return ret;
 }
 
 //------------------------------------------------------------------------------
-static unsigned int to_ms_flags(unsigned int access_flags)
+static uint32 to_ms_flags(uint32 access_flags)
 {
-    unsigned int ret = PAGE_NOACCESS;
-    if (access_flags & vm::access_cow)          ret = PAGE_WRITECOPY;
-    else if (access_flags & vm::access_write)   ret = PAGE_READWRITE;
-    else if (access_flags & vm::access_read)    ret = PAGE_READONLY;
-    if (access_flags & vm::access_execute)      ret <<= 4;
+    uint32 ret = PAGE_NOACCESS;
+    if (access_flags & Vm::access_cow)          ret = PAGE_WRITECOPY;
+    else if (access_flags & Vm::access_write)   ret = PAGE_READWRITE;
+    else if (access_flags & Vm::access_read)    ret = PAGE_READONLY;
+    if (access_flags & Vm::access_execute)      ret <<= 4;
     return ret;
 }
 
 
 
 //------------------------------------------------------------------------------
-vm::vm(int pid)
+Vm::Vm(int32 pid)
 {
     if (pid > 0)
-        m_handle = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_OPERATION|
+        _handle = OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_OPERATION|
             PROCESS_VM_WRITE|PROCESS_VM_READ, FALSE, pid);
     else
-        m_handle = GetCurrentProcess();
+        _handle = GetCurrentProcess();
 }
 
 //------------------------------------------------------------------------------
-vm::~vm()
+Vm::~Vm()
 {
-    if (m_handle != nullptr)
-        CloseHandle(m_handle);
+    if (_handle != nullptr)
+        CloseHandle(_handle);
 }
 
 //------------------------------------------------------------------------------
-size_t vm::get_block_granularity()
+size_t Vm::get_block_granularity()
 {
     if (!g_alloc_granularity)
         initialise_page_constants();
@@ -70,7 +70,7 @@ size_t vm::get_block_granularity()
 }
 
 //------------------------------------------------------------------------------
-size_t vm::get_page_size()
+size_t Vm::get_page_size()
 {
     if (!g_page_size)
         initialise_page_constants();
@@ -79,109 +79,109 @@ size_t vm::get_page_size()
 }
 
 //------------------------------------------------------------------------------
-void* vm::get_alloc_base(void* address)
+void* Vm::get_alloc_base(void* address)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return nullptr;
 
     MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(m_handle, address, &mbi, sizeof(mbi)))
+    if (VirtualQueryEx(_handle, address, &mbi, sizeof(mbi)))
         return mbi.AllocationBase;
 
     return nullptr;
 }
 
 //------------------------------------------------------------------------------
-vm::region vm::get_region(void* address)
+Vm::Region Vm::get_region(void* address)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return {};
 
     MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(m_handle, address, &mbi, sizeof(mbi)))
-        return {mbi.BaseAddress, unsigned(mbi.RegionSize / get_page_size())};
+    if (VirtualQueryEx(_handle, address, &mbi, sizeof(mbi)))
+        return {mbi.BaseAddress, uint32(mbi.RegionSize / get_page_size())};
 
     return {};
 }
 
 //------------------------------------------------------------------------------
-void* vm::get_page(void* address)
+void* Vm::get_page(void* address)
 {
     return (void*)(uintptr_t(address) & ~(get_page_size() - 1));
 }
 
 //------------------------------------------------------------------------------
-vm::region vm::alloc(unsigned int page_count, unsigned int access)
+Vm::Region Vm::alloc(uint32 page_count, uint32 access)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return {};
 
-    int ms_access = to_ms_flags(access);
+    int32 ms_access = to_ms_flags(access);
     size_t size = page_count * get_page_size();
-    if (void* base = VirtualAllocEx(m_handle, nullptr, size, MEM_COMMIT, ms_access))
+    if (void* base = VirtualAllocEx(_handle, nullptr, size, MEM_COMMIT, ms_access))
         return {base, page_count};
 
     return {};
 }
 
 //------------------------------------------------------------------------------
-void vm::free(const region& region)
+void Vm::free(const Region& Region)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return;
 
-    size_t size = region.page_count * get_page_size();
-    VirtualFreeEx(m_handle, region.base, size, MEM_RELEASE);
+    size_t size = Region.page_count * get_page_size();
+    VirtualFreeEx(_handle, Region.base, size, MEM_RELEASE);
 }
 
 //------------------------------------------------------------------------------
-int vm::get_access(const region& region)
+int32 Vm::get_access(const Region& Region)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return -1;
 
     MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(m_handle, region.base, &mbi, sizeof(mbi)))
+    if (VirtualQueryEx(_handle, Region.base, &mbi, sizeof(mbi)))
         return to_access_flags(mbi.Protect);
 
     return -1;
 }
 
 //------------------------------------------------------------------------------
-void vm::set_access(const region& region, unsigned int access)
+void Vm::set_access(const Region& Region, uint32 access)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return;
 
     DWORD ms_flags = to_ms_flags(access);
-    size_t size = region.page_count * get_page_size();
-    VirtualProtectEx(m_handle, region.base, size, ms_flags, &ms_flags);
+    size_t size = Region.page_count * get_page_size();
+    VirtualProtectEx(_handle, Region.base, size, ms_flags, &ms_flags);
 }
 
 //------------------------------------------------------------------------------
-bool vm::read(void* dest, const void* src, size_t size)
+bool Vm::read(void* dest, const void* src, size_t size)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return false;
 
-    return (ReadProcessMemory(m_handle, src, dest, size, nullptr) != FALSE);
+    return (ReadProcessMemory(_handle, src, dest, size, nullptr) != FALSE);
 }
 
 //------------------------------------------------------------------------------
-bool vm::write(void* dest, const void* src, size_t size)
+bool Vm::write(void* dest, const void* src, size_t size)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return false;
 
-    return (WriteProcessMemory(m_handle, dest, src, size, nullptr) != FALSE);
+    return (WriteProcessMemory(_handle, dest, src, size, nullptr) != FALSE);
 }
 
 //------------------------------------------------------------------------------
-void vm::flush_icache(const region& region)
+void Vm::flush_icache(const Region& Region)
 {
-    if (m_handle == nullptr)
+    if (_handle == nullptr)
         return;
 
-    size_t size = region.page_count * get_page_size();
-    FlushInstructionCache(m_handle, region.base, size);
+    size_t size = Region.page_count * get_page_size();
+    FlushInstructionCache(_handle, Region.base, size);
 }

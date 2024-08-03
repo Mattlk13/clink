@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -6,14 +6,14 @@
 
 //------------------------------------------------------------------------------
 template <>
-int str_iter_impl<char>::next()
+int32 StrIterImpl<char>::next()
 {
     if (!more())
         return 0;
 
-    int ax = 0;
-    int encode_length = 0;
-    while (int c = *m_ptr++)
+    int32 ax = 0;
+    int32 encode_length = 0;
+    while (int32 c = *_ptr++)
     {
         ax = (ax << 6) | (c & 0x7f);
         if (encode_length)
@@ -39,13 +39,13 @@ int str_iter_impl<char>::next()
 
 //------------------------------------------------------------------------------
 template <>
-int str_iter_impl<wchar_t>::next()
+int32 StrIterImpl<wchar_t>::next()
 {
     if (!more())
         return 0;
 
-    int ax = 0;
-    while (int c = *m_ptr++)
+    int32 ax = 0;
+    while (int32 c = *_ptr++)
     {
         // Decode surrogate pairs.
         if ((c & 0xfc00) == 0xd800)
@@ -64,14 +64,14 @@ int str_iter_impl<wchar_t>::next()
 
 //------------------------------------------------------------------------------
 template <>
-unsigned int str_iter_impl<char>::length() const
+uint32 StrIterImpl<char>::length() const
 {
-    return (unsigned int)((m_ptr <= m_end) ? m_end - m_ptr : strlen(m_ptr));
+    return (uint32)((_ptr <= _end) ? _end - _ptr : strlen(_ptr));
 }
 
 //------------------------------------------------------------------------------
 template <>
-unsigned int str_iter_impl<wchar_t>::length() const
+uint32 StrIterImpl<wchar_t>::length() const
 {
-    return (unsigned int)((m_ptr <= m_end) ? m_end - m_ptr : wcslen(m_ptr));
+    return (uint32)((_ptr <= _end) ? _end - _ptr : wcslen(_ptr));
 }

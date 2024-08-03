@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -15,7 +15,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 {
     SECTION("Basics")
     {
-        str<256> s;
+        Str<256> s;
         REQUIRE(s.length() == 0);
         REQUIRE(s.char_count() == s.length());
         REQUIRE(s.data() == s.c_str());
@@ -40,8 +40,8 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Concatenation (growable)")
     {
-        str<4> s;
-        int ones = ~0;
+        Str<4> s;
+        int32 ones = ~0;
 
         REQUIRE(s.copy(STR("123")) == true);
         REQUIRE(s.equals(STR("123")) == true);
@@ -77,8 +77,8 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Concatenation (fixed)")
     {
-        str<4, false> s;
-        int ones = ~0;
+        Str<4, false> s;
+        int32 ones = ~0;
 
         REQUIRE(s.copy(STR("123")) == true);
         REQUIRE(s.equals(STR("123")) == true);
@@ -108,7 +108,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Truncate")
     {
-        str<16> s;
+        Str<16> s;
         s << STR("01234567");
 
         REQUIRE(s.length() == 8);
@@ -126,7 +126,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Index of")
     {
-        str<16> s;
+        Str<16> s;
         s << STR("AaBbbBaA");
 
         REQUIRE(s.first_of('A') == 0);
@@ -137,7 +137,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Equality")
     {
-        str<16> s;
+        Str<16> s;
         s.copy(STR("aBc"));
 
         REQUIRE(s.equals(STR("aBc")) == true);
@@ -147,7 +147,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Format")
     {
-        str<6> s;
+        Str<6> s;
 
         REQUIRE(s.format(STR("%d"), 123) == true);
         REQUIRE(s.equals(STR("123")));
@@ -158,7 +158,7 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Operators")
     {
-        str<> s;
+        Str<> s;
 
         s << STR("abc");
         REQUIRE(s.equals(STR("abc")) == true);
@@ -173,8 +173,8 @@ TEST_CASE("Strings" NAME_SUFFIX)
 
     SECTION("Construction")
     {
-        char buffer[] = "test";
-        REQUIRE(str_base(buffer).equals("test") == true);
+        char buffer[] = "Test";
+        REQUIRE(StrBase(buffer).equals("Test") == true);
     }
 }
 

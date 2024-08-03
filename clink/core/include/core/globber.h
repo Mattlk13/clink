@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -8,30 +8,30 @@
 #include <Windows.h>
 
 //------------------------------------------------------------------------------
-class globber
+class Globber
 {
 public:
-                        globber(const char* pattern);
-                        ~globber();
-    void                files(bool state)       { m_files = state; }
-    void                directories(bool state) { m_directories = state; }
-    void                suffix_dirs(bool state) { m_dir_suffix = state; }
-    void                hidden(bool state)      { m_hidden = state; }
-    void                system(bool state)      { m_system = state; }
-    void                dots(bool state)        { m_dots = state; }
-    bool                next(str_base& out, bool rooted=true);
+                        Globber(const char* pattern);
+                        ~Globber();
+    void                files(bool state)       { _files = state; }
+    void                directories(bool state) { _directories = state; }
+    void                suffix_dirs(bool state) { _dir_suffix = state; }
+    void                hidden(bool state)      { _hidden = state; }
+    void                system(bool state)      { _system = state; }
+    void                dots(bool state)        { _dots = state; }
+    bool                next(StrBase& out, bool rooted=true);
 
 private:
-                        globber(const globber&) = delete;
-    void                operator = (const globber&) = delete;
+                        Globber(const Globber&) = delete;
+    void                operator = (const Globber&) = delete;
     void                next_file();
-    WIN32_FIND_DATAW    m_data;
-    HANDLE              m_handle;
-    str<280>            m_root;
-    bool                m_files;
-    bool                m_directories;
-    bool                m_dir_suffix;
-    bool                m_hidden;
-    bool                m_system;
-    bool                m_dots;
+    WIN32_FIND_DATAW    _data;
+    HANDLE              _handle;
+    Str<280>            _root;
+    bool                _files;
+    bool                _directories;
+    bool                _dir_suffix;
+    bool                _hidden;
+    bool                _system;
+    bool                _dots;
 };

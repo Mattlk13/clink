@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -9,7 +9,7 @@
 #include <Windows.h>
 
 //------------------------------------------------------------------------------
-class str_compare_scope
+class StrCompareScope
 {
 public:
     enum
@@ -19,34 +19,34 @@ public:
         relaxed,    // case insensitive with -/_ considered equivalent.
     };
 
-                str_compare_scope(int mode);
-                ~str_compare_scope();
-    static int  current();
+                StrCompareScope(int32 mode);
+                ~StrCompareScope();
+    static int32  current();
 
 private:
-    int         m_prev_mode;
-    threadlocal static int ts_mode;
+    int32       _prev_mode;
+    threadlocal static int32 ts_mode;
 };
 
 
 
 //------------------------------------------------------------------------------
-template <class T, int MODE>
-int str_compare_impl(str_iter_impl<T>& lhs, str_iter_impl<T>& rhs)
+template <class T, int32 MODE>
+int32 StrCompareImpl(StrIterImpl<T>& lhs, StrIterImpl<T>& rhs)
 {
     const T* start = lhs.get_pointer();
 
     while (1)
     {
-        int c = lhs.peek();
-        int d = rhs.peek();
+        int32 c = lhs.peek();
+        int32 d = rhs.peek();
         if (!c || !d)
             break;
 
         if (MODE > 0)
         {
-            c = (c > 0xffff) ? c : int(uintptr_t(CharLowerW(LPWSTR(uintptr_t(c)))));
-            d = (d > 0xffff) ? d : int(uintptr_t(CharLowerW(LPWSTR(uintptr_t(d)))));
+            c = (c > 0xffff) ? c : int32(uintptr_t(CharLowerW(LPWSTR(uintptr_t(c)))));
+            d = (d > 0xffff) ? d : int32(uintptr_t(CharLowerW(LPWSTR(uintptr_t(d)))));
         }
 
         if (MODE > 1)
@@ -63,37 +63,37 @@ int str_compare_impl(str_iter_impl<T>& lhs, str_iter_impl<T>& rhs)
     }
 
     if (lhs.more() || rhs.more())
-        return int(lhs.get_pointer() - start);
+        return int32(lhs.get_pointer() - start);
 
     return -1;
 }
 
 //------------------------------------------------------------------------------
 template <class T>
-int str_compare(str_iter_impl<T>& lhs, str_iter_impl<T>& rhs)
+int32 str_compare(StrIterImpl<T>& lhs, StrIterImpl<T>& rhs)
 {
-    switch (str_compare_scope::current())
+    switch (StrCompareScope::current())
     {
-    case str_compare_scope::relaxed:  return str_compare_impl<T, 2>(lhs, rhs);
-    case str_compare_scope::caseless: return str_compare_impl<T, 1>(lhs, rhs);
-    default:                          return str_compare_impl<T, 0>(lhs, rhs);
+    case StrCompareScope::relaxed:    return StrCompareImpl<T, 2>(lhs, rhs);
+    case StrCompareScope::caseless: return StrCompareImpl<T, 1>(lhs, rhs);
+    default:                          return StrCompareImpl<T, 0>(lhs, rhs);
     }
 }
 
 //------------------------------------------------------------------------------
 template <class T>
-int str_compare(const T* lhs, const T* rhs)
+int32 str_compare(const T* lhs, const T* rhs)
 {
-    str_iter_impl<T> lhs_iter(lhs);
-    str_iter_impl<T> rhs_iter(rhs);
+    StrIterImpl<T> lhs_iter(lhs);
+    StrIterImpl<T> rhs_iter(rhs);
     return str_compare(lhs_iter, rhs_iter);
 }
 
 //------------------------------------------------------------------------------
 template <class T>
-int str_compare(const str_impl<T>& lhs, const str_impl<T>& rhs)
+int32 str_compare(const StrImpl<T>& lhs, const StrImpl<T>& rhs)
 {
-    str_iter_impl<T> lhs_iter(lhs);
-    str_iter_impl<T> rhs_iter(rhs);
+    StrIterImpl<T> lhs_iter(lhs);
+    StrIterImpl<T> rhs_iter(rhs);
     return str_compare(lhs_iter, rhs_iter);
 }

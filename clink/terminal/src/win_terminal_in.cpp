@@ -1,13 +1,23 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
 #include "win_terminal_in.h"
 
 #include <core/base.h>
+#include <core/settings.h>
 #include <core/str.h>
 
 #include <Windows.h>
+
+//------------------------------------------------------------------------------
+static SettingEnum g_escape_remap(
+    "input.esc",
+    "Remaps the escape key",
+    "Changes how the escape key is interpreted. A value of 1 translates escape\n"
+    "into a Ctrl-C. Option 2 reverts the line (standard Windows behaviour).",
+    "raw,ctrl_c,revert_line",
+    2);
 
 //------------------------------------------------------------------------------
 #define CSI(x) "\x1b[" #x
@@ -23,7 +33,8 @@ static const char* const khome[] = { CSI(H),  CSI(1;2H), CSI(1;3H), CSI(1;4H), C
 static const char* const kend[]  = { CSI(F),  CSI(1;2F), CSI(1;3F), CSI(1;4F), CSI(1;5F), CSI(1;6F), CSI(1;7F), CSI(1;8F) }; // end
 static const char* const kpp[]   = { CSI(5~), CSI(5;2~), CSI(5;3~), CSI(5;4~), CSI(5;5~), CSI(5;6~), CSI(5;7~), CSI(5;8~) }; // pgup
 static const char* const knp[]   = { CSI(6~), CSI(6;2~), CSI(6;3~), CSI(6;4~), CSI(6;5~), CSI(6;6~), CSI(6;7~), CSI(6;8~) }; // pgdn
-static const char* const kcbt    = CSI(Z);
+static const char* const kcbt    = CSI(Z); // back tab key
+static const char* const kdl1    = CSI(M); // delete line key
 static const char* const kfx[]   = {
     // kf1-12 : Fx unmodified
     SS3(P),     SS3(Q),     SS3(R),     SS3(S),
@@ -52,7 +63,7 @@ static const char* const kfx[]   = {
 
 
 //------------------------------------------------------------------------------
-enum : unsigned char
+enum : uint8
 {
     input_abort_byte    = 0xff,
     input_none_byte     = 0xfe,
@@ -62,12 +73,12 @@ enum : unsigned char
 
 
 //------------------------------------------------------------------------------
-static unsigned int get_dimensions()
+static uint32 get_dimensions()
 {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-    auto cols = short(csbi.dwSize.X);
-    auto rows = short(csbi.srWindow.Bottom - csbi.srWindow.Top) + 1;
+    auto cols = int16(csbi.dwSize.X);
+    auto rows = int16(csbi.srWindow.Bottom - csbi.srWindow.Top) + 1;
     return (cols << 16) | rows;
 }
 
@@ -95,8 +106,8 @@ static void adjust_cursor_on_resize(COORD prev_position)
         return;
 
     COORD fix_position = {
-        short(csbi.dwSize.X - 1),
-        short(csbi.dwCursorPosition.Y - 1)
+        int16(csbi.dwSize.X - 1),
+        int16(csbi.dwCursorPosition.Y - 1)
     };
     SetConsoleCursorPosition(handle, fix_position);
 }
@@ -104,82 +115,84 @@ static void adjust_cursor_on_resize(COORD prev_position)
 
 
 //------------------------------------------------------------------------------
-void win_terminal_in::begin()
+void WinTerminalIn::begin()
 {
-    m_buffer_count = 0;
-    m_stdin = GetStdHandle(STD_INPUT_HANDLE);
-    GetConsoleMode(m_stdin, &m_prev_mode);
+    _buffer_count = 0;
+    _stdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD prev_mode;
+    GetConsoleMode(_stdin, &prev_mode);
+    _prev_mode = prev_mode;
     set_cursor_visibility(false);
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::end()
+void WinTerminalIn::end()
 {
     set_cursor_visibility(true);
-    SetConsoleMode(m_stdin, m_prev_mode);
-    m_stdin = nullptr;
+    SetConsoleMode(_stdin, _prev_mode);
+    _stdin = nullptr;
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::select()
+void WinTerminalIn::select()
 {
-    if (!m_buffer_count)
+    if (!_buffer_count)
         read_console();
 }
 
 //------------------------------------------------------------------------------
-int win_terminal_in::read()
+int32 WinTerminalIn::read()
 {
-    unsigned int dimensions = get_dimensions();
-    if (dimensions != m_dimensions)
+    uint32 dimensions = get_dimensions();
+    if (dimensions != _dimensions)
     {
-        m_dimensions = dimensions;
-        return terminal_in::input_terminal_resize;
+        _dimensions = dimensions;
+        return TerminalIn::input_terminal_resize;
     }
 
-    if (!m_buffer_count)
-        return terminal_in::input_none;
+    if (!_buffer_count)
+        return TerminalIn::input_none;
 
-    unsigned char c = pop();
+    uint8 c = pop();
     switch (c)
     {
-    case input_none_byte:       return terminal_in::input_none;
-    case input_timeout_byte:    return terminal_in::input_timeout;
-    case input_abort_byte:      return terminal_in::input_abort;
+    case input_none_byte:       return TerminalIn::input_none;
+    case input_timeout_byte:    return TerminalIn::input_timeout;
+    case input_abort_byte:      return TerminalIn::input_abort;
     default:                    return c;
     }
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::read_console()
+void WinTerminalIn::read_console()
 {
     // Clear 'processed input' flag so key presses such as Ctrl-C and Ctrl-S
     // aren't swallowed. We also want events about window size changes.
-    struct mode_scope {
+    struct ModeScope {
         HANDLE  handle;
         DWORD   prev_mode;
 
-        mode_scope(HANDLE handle) : handle(handle)
+        ModeScope(HANDLE handle) : handle(handle)
         {
             GetConsoleMode(handle, &prev_mode);
             SetConsoleMode(handle, ENABLE_WINDOW_INPUT);
         }
 
-        ~mode_scope()
+        ~ModeScope()
         {
             SetConsoleMode(handle, prev_mode);
         }
-    } _ms(m_stdin);
+    } _ms(_stdin);
 
     // Hide the cursor unless we're accepting input so we don't have to see it
     // jump around as the screen's drawn.
-    struct cursor_scope {
-        cursor_scope()  { set_cursor_visibility(true); }
-        ~cursor_scope() { set_cursor_visibility(false); }
+    struct CursorScope {
+        CursorScope()   { set_cursor_visibility(true); }
+        ~CursorScope() { set_cursor_visibility(false); }
     } _cs;
 
     // Conhost restarts the cursor blink when writing to the console. It restarts
-    // hidden which means that if you type faster than the blink the cursor turns
+    // hidden which means that if you Type faster than the blink the cursor turns
     // invisible. Fortunately, moving the cursor restarts the blink on visible.
     HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -188,16 +201,16 @@ void win_terminal_in::read_console()
 
     // Read input records sent from the terminal (aka conhost) until some
     // input has beeen buffered.
-    unsigned int buffer_count = m_buffer_count;
-    while (buffer_count == m_buffer_count)
+    uint32 buffer_count = _buffer_count;
+    while (buffer_count == _buffer_count)
     {
         DWORD count;
         INPUT_RECORD record;
-        if (!ReadConsoleInputW(m_stdin, &record, 1, &count))
+        if (!ReadConsoleInputW(_stdin, &record, 1, &count))
         {
             // Handle's probably invalid if ReadConsoleInput() failed.
-            m_buffer_count = 1;
-            m_buffer[0] = input_abort_byte;
+            _buffer_count = 1;
+            _buffer[0] = input_abort_byte;
             return;
         }
 
@@ -232,15 +245,15 @@ void win_terminal_in::read_console()
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
+void WinTerminalIn::process_input(KEY_EVENT_RECORD const& record)
 {
-    static const int CTRL_PRESSED = LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED;
-    static const int ALT_PRESSED = LEFT_ALT_PRESSED|RIGHT_ALT_PRESSED;
+    static const int32 CTRL_PRESSED = LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED;
+    static const int32 ALT_PRESSED = LEFT_ALT_PRESSED|RIGHT_ALT_PRESSED;
 
-    int key_char = record.uChar.UnicodeChar;
-    int key_vk = record.wVirtualKeyCode;
-    int key_sc = record.wVirtualScanCode;
-    int key_flags = record.dwControlKeyState;
+    int32 key_char = record.uChar.UnicodeChar;
+    int32 key_vk = record.wVirtualKeyCode;
+    int32 key_sc = record.wVirtualScanCode;
+    int32 key_flags = record.dwControlKeyState;
 
     // We filter out Alt key presses unless they generated a character.
     if (key_vk == VK_MENU)
@@ -258,7 +271,7 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
     // If the input was formed using AltGr or LeftAlt-LeftCtrl then things get
     // tricky. But there's always a Ctrl bit set, even if the user didn't press
     // a ctrl key. We can use this and the knowledge that Ctrl-modified keys
-    // aren't printable to clear appropriate AltGr flags.
+    // aren't printable to clear appropriate AltGr Flags.
     if (key_char > 0x1f && (key_flags & CTRL_PRESSED))
     {
         key_flags &= ~CTRL_PRESSED;
@@ -269,21 +282,32 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
     }
 
     // Special case for shift-tab (aka. back-tab or kcbt).
-    if (key_char == '\t' && !m_buffer_count && (key_flags & SHIFT_PRESSED))
+    if (key_char == '\t' && !_buffer_count && (key_flags & SHIFT_PRESSED))
         return push(terminfo::kcbt);
 
     // Function keys (kf1-kf48 from xterm+pcf2)
-    unsigned key_func = key_vk - VK_F1;
+    uint32 key_func = key_vk - VK_F1;
     if (key_func <= (VK_F12 - VK_F1))
     {
         if (key_flags & ALT_PRESSED)
             push(0x1b);
 
-        int kfx_group = !!(key_flags & SHIFT_PRESSED);
+        int32 kfx_group = !!(key_flags & SHIFT_PRESSED);
         kfx_group |= !!(key_flags & CTRL_PRESSED) << 1;
         push((terminfo::kfx + (12 * kfx_group) + key_func)[0]);
 
         return;
+    }
+
+    // Turn ESC into a "delete line" key press
+    if (key_vk == VK_ESCAPE)
+    {
+        switch (g_escape_remap.get())
+        {
+        case 1:  return push("\x03"); // ctrl-c
+        case 2:  return push(terminfo::kdl1);
+        default: break;
+        }
     }
 
     // Include an ESC character in the input stream if Alt is pressed.
@@ -297,12 +321,12 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
 
     // The numpad keys such as PgUp, End, etc. don't come through with the
     // ENHANCED_KEY flag set so we'll infer it here.
-    static const int enhanced_vks[] = {
+    static const int32 enhanced_vks[] = {
         VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_HOME, VK_END,
         VK_INSERT, VK_DELETE, VK_PRIOR, VK_NEXT,
     };
 
-    for (int i = 0; i < sizeof_array(enhanced_vks); ++i)
+    for (int32 i = 0; i < sizeof_array(enhanced_vks); ++i)
     {
         if (key_vk == enhanced_vks[i])
         {
@@ -315,7 +339,7 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
     if (key_flags & ENHANCED_KEY)
     {
         static const struct {
-            int                 code;
+            int32               code;
             const char* const*  seqs;
         } sc_map[] = {
             { 'H', terminfo::kcuu1, }, // up
@@ -331,7 +355,7 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
         };
 
         // Calculate Xterm's modifier number.
-        int i = 0;
+        int32 i = 0;
         i |= !!(key_flags & SHIFT_PRESSED);
         i |= !!(key_flags & ALT_PRESSED) << 1;
         i |= !!(key_flags & CTRL_PRESSED) << 2;
@@ -352,7 +376,7 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
     // key_char and some don't.
     if (key_flags & CTRL_PRESSED)
     {
-        #define CONTAINS(l, r) (unsigned)(key_vk - l) <= (r - l)
+        #define CONTAINS(l, r) (uint32)(key_vk - l) <= (r - l)
              if (CONTAINS('A', 'Z'))    key_vk -= 'A' - 1;
         else if (CONTAINS(0xdb, 0xdd))  key_vk -= 0xdb - 0x1b;
         else if (key_vk == 0x32)        key_vk = 0;
@@ -369,55 +393,55 @@ void win_terminal_in::process_input(KEY_EVENT_RECORD const& record)
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::push(const char* seq)
+void WinTerminalIn::push(const char* seq)
 {
-    static const unsigned int mask = sizeof_array(m_buffer) - 1;
+    static const uint32 mask = sizeof_array(_buffer) - 1;
 
-    if (m_buffer_count >= sizeof_array(m_buffer))
+    if (_buffer_count >= sizeof_array(_buffer))
         return;
 
-    int index = m_buffer_head + m_buffer_count;
-    for (; m_buffer_count <= mask && *seq; ++m_buffer_count, ++index, ++seq)
-        m_buffer[index & mask] = *seq;
+    int32 index = _buffer_head + _buffer_count;
+    for (; _buffer_count <= mask && *seq; ++_buffer_count, ++index, ++seq)
+        _buffer[index & mask] = *seq;
 }
 
 //------------------------------------------------------------------------------
-void win_terminal_in::push(unsigned int value)
+void WinTerminalIn::push(uint32 value)
 {
-    static const unsigned int mask = sizeof_array(m_buffer) - 1;
+    static const uint32 mask = sizeof_array(_buffer) - 1;
 
-    if (m_buffer_count >= sizeof_array(m_buffer))
+    if (_buffer_count >= sizeof_array(_buffer))
         return;
 
-    int index = m_buffer_head + m_buffer_count;
+    int32 index = _buffer_head + _buffer_count;
 
     if (value < 0x80)
     {
-        m_buffer[index & mask] = value;
-        ++m_buffer_count;
+        _buffer[index & mask] = value;
+        ++_buffer_count;
         return;
     }
 
     wchar_t wc[2] = { (wchar_t)value, 0 };
     char utf8[mask + 1];
-    unsigned int n = to_utf8(utf8, sizeof_array(utf8), wc);
-    if (n <= unsigned(mask - m_buffer_count))
-        for (unsigned int i = 0; i < n; ++i, ++index)
-            m_buffer[index & mask] = utf8[i];
+    uint32 n = to_utf8(utf8, sizeof_array(utf8), wc);
+    if (n <= uint32(mask - _buffer_count))
+        for (uint32 i = 0; i < n; ++i, ++index)
+            _buffer[index & mask] = utf8[i];
 
-    m_buffer_count += n;
+    _buffer_count += n;
 }
 
 //------------------------------------------------------------------------------
-unsigned char win_terminal_in::pop()
+uint8 WinTerminalIn::pop()
 {
-    if (!m_buffer_count)
+    if (!_buffer_count)
         return input_none_byte;
 
-    unsigned char value = m_buffer[m_buffer_head];
+    uint8 value = _buffer[_buffer_head];
 
-    --m_buffer_count;
-    m_buffer_head = (m_buffer_head + 1) & (sizeof_array(m_buffer) - 1);
+    --_buffer_count;
+    _buffer_head = (_buffer_head + 1) & (sizeof_array(_buffer) - 1);
 
     return value;
 }

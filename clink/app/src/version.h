@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -14,5 +14,5 @@
 #define CLINK_VERSION_STR   AS_STR(CLINK_VERSION_MAJOR) "."\
                             AS_STR(CLINK_VERSION_MINOR) "."\
                             AS_STR(CLINK_VERSION_PATCH)\
-                            "a1"\
+                            "a5"\
                             "." AS_STR(CLINK_COMMIT)

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -7,17 +7,17 @@
 #include <lua/lua_state.h>
 
 //------------------------------------------------------------------------------
-class host_lua
+class HostLua
 {
 public:
-                        host_lua();
-                        operator lua_state& ();
-                        operator match_generator& ();
+                        HostLua();
+                        operator LuaState& ();
+                        operator MatchGenerator& ();
     void                load_scripts();
 
 private:
     void                load_scripts(const char* paths);
     void                load_script(const char* path);
-    lua_state           m_state;
-    lua_match_generator m_generator;
+    LuaState            _state;
+    LuaMatchGenerator _generator;
 };

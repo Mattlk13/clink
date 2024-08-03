@@ -1,39 +1,39 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 #include <core/str_iter.h>
 
-template <typename T> class array;
+template <typename T> class Array;
 
 //------------------------------------------------------------------------------
-struct word
+struct Word
 {
-    unsigned int        offset : 14;
-    unsigned int        length : 10;
-    unsigned int        quoted : 1;
-    unsigned int        delim  : 7;
+    uint32              offset : 14;
+    uint32              length : 10;
+    uint32              quoted : 1;
+    uint32              delim  : 7;
 };
 
 //------------------------------------------------------------------------------
-class line_state
+class LineState
 {
 public:
-                        line_state(const char* line, unsigned int cursor, unsigned int command_offset, const array<word>& words);
+                        LineState(const char* line, uint32 cursor, uint32 command_offset, const Array<Word>& words);
     const char*         get_line() const;
-    unsigned int        get_cursor() const;
-    unsigned int        get_command_offset() const;
-    const array<word>&  get_words() const;
-    unsigned int        get_word_count() const;
-    bool                get_word(unsigned int index, str_base& out) const;
-    str_iter            get_word(unsigned int index) const;
-    bool                get_end_word(str_base& out) const;
-    str_iter            get_end_word() const;
+    uint32              get_cursor() const;
+    uint32              get_command_offset() const;
+    const Array<Word>&  get_words() const;
+    uint32              get_word_count() const;
+    bool                get_word(uint32 index, StrBase& out) const;
+    StrIter             get_word(uint32 index) const;
+    bool                get_end_word(StrBase& out) const;
+    StrIter             get_end_word() const;
 
 private:
-    const array<word>&  m_words;
-    const char*         m_line;
-    unsigned int        m_cursor;
-    unsigned int        m_command_offset;
+    const Array<Word>&  _words;
+    const char*         _line;
+    uint32              _cursor;
+    uint32              _command_offset;
 };

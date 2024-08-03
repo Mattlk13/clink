@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -43,14 +43,21 @@ template <class A> A max(A a, A b) { return (a > b) ? a : b; }
 template <class A> A clamp(A v, A m, A M) { return min(max(v, m), M); }
 
 //------------------------------------------------------------------------------
-struct no_copy
+#include <cstdint>
+using int8  = int8_t;  using uint8  = uint8_t;
+using int16 = int16_t; using uint16 = uint16_t;
+using int32 = int32_t; using uint32 = uint32_t;
+using int64 = int64_t; using uint64 = uint64_t;
+
+//------------------------------------------------------------------------------
+struct NoCopy
 {
-            no_copy() = default;
-            ~no_copy() = default;
+            NoCopy() = default;
+            ~NoCopy() = default;
 
 private:
-            no_copy(const no_copy&) = delete;
-            no_copy(const no_copy&&) = delete;
-    void    operator = (const no_copy&) = delete;
-    void    operator = (const no_copy&&) = delete;
+            NoCopy(const NoCopy&) = delete;
+            NoCopy(const NoCopy&&) = delete;
+    void    operator = (const NoCopy&) = delete;
+    void    operator = (const NoCopy&&) = delete;
 };

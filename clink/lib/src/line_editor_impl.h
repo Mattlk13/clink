@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -16,24 +16,24 @@
 #include <terminal/printer.h>
 
 //------------------------------------------------------------------------------
-class line_editor_impl
-    : public line_editor
+class LineEditorImpl
+    : public LineEditor
 {
 public:
-                        line_editor_impl(const desc& desc);
-    virtual bool        add_module(editor_module& module) override;
-    virtual bool        add_generator(match_generator& generator) override;
-    virtual bool        get_line(char* out, int out_size) override;
-    virtual bool        edit(char* out, int out_size) override;
+                        LineEditorImpl(const Desc& desc);
+    virtual bool        add_module(EditorModule& module) override;
+    virtual bool        add_generator(MatchGenerator& generator) override;
+    virtual bool        get_line(char* out, int32 out_size) override;
+    virtual bool        edit(char* out, int32 out_size) override;
     virtual bool        update() override;
 
 private:
-    typedef editor_module                       module;
-    typedef fixed_array<editor_module*, 16>     modules;
-    typedef fixed_array<match_generator*, 32>   generators;
-    typedef fixed_array<word, 72>               words;
+    typedef EditorModule                    Module;
+    typedef FixedArray<EditorModule*, 16>   Modules;
+    typedef FixedArray<MatchGenerator*, 32> Generators;
+    typedef FixedArray<Word, 72>            Words;
 
-    enum flags : unsigned char
+    enum Flags : uint8
     {
         flag_init       = 1 << 0,
         flag_editing    = 1 << 1,
@@ -44,29 +44,29 @@ private:
     void                initialise();
     void                begin_line();
     void                end_line();
-    void                find_command_bounds(const char*& start, int& length);
+    void                find_command_bounds(const char*& start, int32& length);
     void                collect_words();
     void                update_internal();
     void                update_input();
-    void                accept_match(unsigned int index);
+    void                accept_match(uint32 index);
     void                append_match_lcd();
-    module::context     get_context(const line_state& line) const;
-    line_state          get_linestate() const;
-    void                set_flag(unsigned char flag);
-    void                clear_flag(unsigned char flag);
-    bool                check_flag(unsigned char flag) const;
-    rl_module           m_module;
-    rl_buffer           m_buffer;
-    desc                m_desc;
-    modules             m_modules;
-    generators          m_generators;
-    binder              m_binder;
-    bind_resolver       m_bind_resolver = { m_binder };
-    words               m_words;
-    matches_impl        m_matches;
-    printer             m_printer;
-    unsigned int        m_prev_key;
-    unsigned short      m_command_offset;
-    unsigned char       m_keys_size;
-    unsigned char       m_flags = 0;
+    Module::Context     get_context(const LineState& line) const;
+    LineState           get_linestate() const;
+    void                set_flag(uint8 flag);
+    void                clear_flag(uint8 flag);
+    bool                check_flag(uint8 flag) const;
+    RlModule            _module;
+    RlBuffer            _buffer;
+    Desc                _desc;
+    Modules             _modules;
+    Generators          _generators;
+    Binder              _binder;
+    BindResolver        _bind_resolver = { _binder };
+    Words               _words;
+    MatchesImpl         _matches;
+    Printer             _printer;
+    uint32              _prev_key;
+    uint16              _command_offset;
+    uint8               _keys_size;
+    uint8               _flags = 0;
 };

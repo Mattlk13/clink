@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -7,30 +7,30 @@
 #include "singleton.h"
 
 //------------------------------------------------------------------------------
-#define LOG(...)    logger::info(__FUNCTION__, __LINE__, __VA_ARGS__)
-#define ERR(...)    logger::error(__FUNCTION__, __LINE__, __VA_ARGS__)
+#define LOG(...)    Logger::info(__FUNCTION__, __LINE__, __VA_ARGS__)
+#define ERR(...)    Logger::error(__FUNCTION__, __LINE__, __VA_ARGS__)
 
 //------------------------------------------------------------------------------
-class logger
-    : public singleton<logger>
+class Logger
+    : public Singleton<Logger>
 {
 public:
-    virtual         ~logger();
-    static void     info(const char* function, int line, const char* fmt, ...);
-    static void     error(const char* function, int line, const char* fmt, ...);
+    virtual         ~Logger();
+    static void     info(const char* function, int32 line, const char* fmt, ...);
+    static void     error(const char* function, int32 line, const char* fmt, ...);
 
 protected:
-    virtual void    emit(const char* function, int line, const char* fmt, va_list args) = 0;
+    virtual void    emit(const char* function, int32 line, const char* fmt, va_list args) = 0;
 };
 
 //------------------------------------------------------------------------------
-class file_logger
-    : public logger
+class FileLogger
+    : public Logger
 {
 public:
-                    file_logger(const char* log_path);
-    virtual void    emit(const char* function, int line, const char* fmt, va_list args) override;
+                    FileLogger(const char* log_path);
+    virtual void    emit(const char* function, int32 line, const char* fmt, va_list args) override;
 
 private:
-    str<256>        m_log_path;
+    Str<256>        _log_path;
 };

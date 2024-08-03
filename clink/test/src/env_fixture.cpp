@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -8,15 +8,15 @@
 #include <Windows.h>
 
 //------------------------------------------------------------------------------
-env_fixture::env_fixture(const char** env)
+EnvFixture::EnvFixture(const char** env)
 {
-    // Store the process' current environment so it can be restored.
-    m_env_strings = GetEnvironmentStringsW();
-    convert_eq_to_null(m_env_strings);
+    // Store the Process' current environment so it can be restored.
+    _env_strings = GetEnvironmentStringsW();
+    convert_eq_to_null(_env_strings);
 
     clear();
 
-    // Apply the test environment.
+    // Apply the Test environment.
     while (*env)
     {
         REQUIRE(SetEnvironmentVariable(env[0], env[1]) != FALSE);
@@ -25,12 +25,12 @@ env_fixture::env_fixture(const char** env)
 }
 
 //------------------------------------------------------------------------------
-env_fixture::~env_fixture()
+EnvFixture::~EnvFixture()
 {
     clear();
 
     // Restore previous environment.
-    wchar_t* env_string = m_env_strings;
+    wchar_t* env_string = _env_strings;
     while (*env_string)
     {
         wchar_t* value = env_string + (wcslen(env_string) + 1);
@@ -38,11 +38,11 @@ env_fixture::~env_fixture()
         env_string = value + wcslen(value) + 1;
     }
 
-    FreeEnvironmentStringsW(m_env_strings);
+    FreeEnvironmentStringsW(_env_strings);
 }
 
 //------------------------------------------------------------------------------
-void env_fixture::convert_eq_to_null(wchar_t* env_strings)
+void EnvFixture::convert_eq_to_null(wchar_t* env_strings)
 {
     wchar_t* env_string = env_strings;
     while (*env_string)
@@ -59,7 +59,7 @@ void env_fixture::convert_eq_to_null(wchar_t* env_strings)
 }
 
 //------------------------------------------------------------------------------
-void env_fixture::clear()
+void EnvFixture::clear()
 {
     wchar_t* env_strings = GetEnvironmentStringsW();
     convert_eq_to_null(env_strings);

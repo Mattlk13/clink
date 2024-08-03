@@ -1,51 +1,51 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
-class binder;
-class editor_module;
-class str_base;
+class Binder;
+class EditorModule;
+class StrBase;
 
 //------------------------------------------------------------------------------
-class bind_resolver
+class BindResolver
 {
 public:
-    class binding
+    class Binding
     {
     public:
         explicit        operator bool () const;
-        editor_module*  get_module() const;
-        unsigned char   get_id() const;
-        void            get_chord(str_base& chord) const;
+        EditorModule*   get_module() const;
+        uint8           get_id() const;
+        void            get_chord(StrBase& chord) const;
         void            claim();
 
     private:
-        friend class    bind_resolver;
-                        binding() = default;
-                        binding(bind_resolver* resolver, int node_index);
-        bind_resolver*  m_outer = nullptr;
-        unsigned short  m_node_index;
-        unsigned char   m_module;
-        unsigned char   m_depth;
-        unsigned char   m_id;
+        friend class    BindResolver;
+                        Binding() = default;
+                        Binding(BindResolver* resolver, int32 node_index);
+        BindResolver*   _outer = nullptr;
+        uint16          _node_index;
+        uint8           _module;
+        uint8           _depth;
+        uint8           _id;
     };
 
-                        bind_resolver(const binder& binder);
-    void                set_group(int group);
-    int                 get_group() const;
-    bool                step(unsigned char key);
-    binding             next();
+                        BindResolver(const Binder& binder);
+    void                set_group(int32 group);
+    int32               get_group() const;
+    bool                step(uint8 key);
+    Binding             next();
     void                reset();
 
 private:
-    void                claim(binding& binding);
-    bool                step_impl(unsigned char key);
-    const binder&       m_binder;
-    unsigned short      m_node_index = 1;
-    unsigned short      m_group = 1;
-    bool                m_pending_input = false;
-    unsigned char       m_tail = 0;
-    unsigned char       m_key_count = 0;
-    char                m_keys[8];
+    void                claim(Binding& Binding);
+    bool                step_impl(uint8 key);
+    const Binder&       _binder;
+    uint16              _node_index = 1;
+    uint16              _group = 1;
+    bool                _pending_input = false;
+    uint8               _tail = 0;
+    uint8               _key_count = 0;
+    char                _keys[8];
 };

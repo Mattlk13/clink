@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -11,13 +11,13 @@
 static LONG WINAPI exception_filter(EXCEPTION_POINTERS* info)
 {
 #if defined(_MSC_VER)
-    str<MAX_PATH, false> buffer;
-    if (const app_context* context = app_context::get())
+    Str<MAX_PATH, false> buffer;
+    if (const AppContext* context = AppContext::get())
         context->get_state_dir(buffer);
     else
     {
-        app_context::desc desc;
-        app_context app_context(desc);
+        AppContext::Desc desc;
+        AppContext app_context(desc);
         app_context.get_state_dir(buffer);
     }
     buffer << "\\clink.dmp";
@@ -30,7 +30,8 @@ static LONG WINAPI exception_filter(EXCEPTION_POINTERS* info)
 
     // Write a core dump file.
     BOOL ok = FALSE;
-    HANDLE file = CreateFile(buffer.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
+    Wstr<256> wbuffer(buffer.c_str());
+    HANDLE file = CreateFileW(wbuffer.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, 0, nullptr);
     if (file != INVALID_HANDLE_VALUE)
     {
         DWORD pid = GetCurrentProcessId();
@@ -70,8 +71,8 @@ static LONG WINAPI exception_filter(EXCEPTION_POINTERS* info)
     fputs("\n!!! Backtrace:", stderr);
     bool skip = true;
     void* backtrace[48];
-    int bt_length = CaptureStackBackTrace(0, sizeof_array(backtrace), backtrace, nullptr);
-    for (int i = 0; i < bt_length; ++i)
+    int32 bt_length = CaptureStackBackTrace(0, sizeof_array(backtrace), backtrace, nullptr);
+    for (int32 i = 0; i < bt_length; ++i)
     {
         if (skip &= (backtrace[i] != record.ExceptionAddress))
             continue;
@@ -93,13 +94,13 @@ static LONG WINAPI exception_filter(EXCEPTION_POINTERS* info)
 
 
 //------------------------------------------------------------------------------
-seh_scope::seh_scope()
+SehScope::SehScope()
 {
-    m_prev_filter = (void*)SetUnhandledExceptionFilter(exception_filter);
+    _prev_filter = (void*)SetUnhandledExceptionFilter(exception_filter);
 }
 
 //------------------------------------------------------------------------------
-seh_scope::~seh_scope()
+SehScope::~SehScope()
 {
-    SetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER(m_prev_filter));
+    SetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER(_prev_filter));
 }

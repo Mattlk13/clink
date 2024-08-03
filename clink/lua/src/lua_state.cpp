@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -15,14 +15,14 @@ extern "C" {
 }
 
 //------------------------------------------------------------------------------
-static setting_bool g_lua_debug(
+static SettingBool g_lua_debug(
     "lua.debug",
     "Enables Lua debugging",
     "Loads an simple embedded command line debugger when enabled. Breakpoints\n"
     "can added by calling pause().",
     false);
 
-static setting_str g_lua_path(
+static SettingStr g_lua_path(
     "lua.path",
     "'require' search path",
     "Value to append to package.path. Used to search for Lua scripts specified\n"
@@ -32,38 +32,39 @@ static setting_str g_lua_path(
 
 
 //------------------------------------------------------------------------------
-void clink_lua_initialise(lua_state&);
-void os_lua_initialise(lua_state&);
-void path_lua_initialise(lua_state&);
-void settings_lua_initialise(lua_state&);
-void string_lua_initialise(lua_state&);
+void clink_lua_initialise(LuaState&);
+void io_lua_initialise(LuaState&);
+void os_lua_initialise(LuaState&);
+void path_lua_initialise(LuaState&);
+void settings_lua_initialise(LuaState&);
+void string_lua_initialise(LuaState&);
 
 
 
 //------------------------------------------------------------------------------
-lua_state::lua_state()
-: m_state(nullptr)
+LuaState::LuaState()
+: _state(nullptr)
 {
     initialise();
 }
 
 //------------------------------------------------------------------------------
-lua_state::~lua_state()
+LuaState::~LuaState()
 {
     shutdown();
 }
 
 //------------------------------------------------------------------------------
-void lua_state::initialise()
+void LuaState::initialise()
 {
     shutdown();
 
     // Create a new Lua state.
-    m_state = luaL_newstate();
-    luaL_openlibs(m_state);
+    _state = luaL_newstate();
+    luaL_openlibs(_state);
 
     // Set up the package.path value for require() statements.
-    str<280> path;
+    Str<280> path;
     if (!os::get_env("lua_path_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR, path))
         os::get_env("lua_path", path);
 
@@ -78,18 +79,19 @@ void lua_state::initialise()
 
     if (!path.empty())
     {
-        lua_getglobal(m_state, "package");
-        lua_pushstring(m_state, "path");
-        lua_pushstring(m_state, path.c_str());
-        lua_rawset(m_state, -3);
+        lua_getglobal(_state, "package");
+        lua_pushstring(_state, "path");
+        lua_pushstring(_state, path.c_str());
+        lua_rawset(_state, -3);
     }
 
-    lua_state& self = *this;
+    LuaState& self = *this;
 
     if (g_lua_debug.get())
         lua_load_script(self, lib, debugger);
 
     clink_lua_initialise(self);
+    io_lua_initialise(self);
     os_lua_initialise(self);
     path_lua_initialise(self);
     settings_lua_initialise(self);
@@ -97,41 +99,88 @@ void lua_state::initialise()
 }
 
 //------------------------------------------------------------------------------
-void lua_state::shutdown()
+void LuaState::shutdown()
 {
-    if (m_state == nullptr)
+    if (_state == nullptr)
         return;
 
-    lua_close(m_state);
-    m_state = nullptr;
+    lua_close(_state);
+    _state = nullptr;
 }
 
 //------------------------------------------------------------------------------
-bool lua_state::do_string(const char* string, int length)
+bool LuaState::do_string(const char* string, int32 length)
 {
     if (length < 0)
-        length = int(strlen(string));
+        length = int32(strlen(string));
 
     bool ok;
-    if (ok = !luaL_loadbuffer(m_state, string, length, string))
-        ok = !lua_pcall(m_state, 0, LUA_MULTRET, 0);
+    if (ok = !luaL_loadbuffer(_state, string, length, string))
+        ok = !lua_pcall(_state, 0, LUA_MULTRET, 0);
 
     if (!ok)
-        if (const char* error = lua_tostring(m_state, -1))
+        if (const char* error = lua_tostring(_state, -1))
             puts(error);
 
-    lua_settop(m_state, 0);
+    lua_settop(_state, 0);
     return ok;
 }
 
 //------------------------------------------------------------------------------
-bool lua_state::do_file(const char* path)
+bool LuaState::do_file(const char* path)
 {
-    bool failed;
-    if (failed = !!luaL_dofile(m_state, path))
-        if (const char* error = lua_tostring(m_state, -1))
-            puts(error);
+    // Open the file
+    HANDLE handle;
+    {
+        Wstr<256> wpath(path);
+        handle = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+            nullptr, OPEN_EXISTING, 0, nullptr);
+    }
 
-    lua_settop(m_state, 0);
-    return !failed;
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    struct IoBuffer
+    {
+        HANDLE  handle;
+        char    buffer[1024];
+    } io = {
+        handle,
+    };
+
+    auto read_file_func = [] (lua_State*, void* param, size_t* size) -> const char*
+    {
+        auto& io = *(IoBuffer*)param;
+        DWORD bytes_read = 0;
+        BOOL ok = ReadFile(io.handle, io.buffer, sizeof(IoBuffer::buffer), &bytes_read, nullptr);
+        if (ok == FALSE)
+            return nullptr;
+        *size = bytes_read;
+        return io.buffer;
+    };
+
+    int32 ok;
+    {
+        Str<280> at_path;
+        at_path << "@";
+        at_path << path;
+        ok = lua_load(_state, read_file_func, &io, at_path.c_str(), nullptr);
+        if (ok != LUA_OK)
+            if (const char* error = lua_tostring(_state, -1))
+                puts(error);
+    }
+
+    if (ok == LUA_OK)
+    {
+        ok = lua_pcall(_state, 0, LUA_MULTRET, 0);
+        if (ok != LUA_OK)
+            if (const char* error = lua_tostring(_state, -1))
+                puts(error);
+    }
+
+    lua_settop(_state, 0);
+    CloseHandle(handle);
+    return (ok == LUA_OK);
 }

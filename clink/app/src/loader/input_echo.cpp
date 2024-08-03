@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -8,9 +8,9 @@
 #include <terminal/terminal_in.h>
 
 //------------------------------------------------------------------------------
-int input_echo(int argc, char** argv)
+int32 input_echo(int32 argc, char** argv)
 {
-    for (int i = 1; i < argc; ++i)
+    for (int32 i = 1; i < argc; ++i)
     {
         const char* arg = argv[i];
         if (_stricmp(arg, "--help") == 0 || _stricmp(arg, "-h") == 0)
@@ -23,22 +23,22 @@ int input_echo(int argc, char** argv)
         }
     }
 
-    terminal terminal = terminal_create();
-    terminal_in& input = *terminal.in;
-    input.begin();
+    Terminal terminal = terminal_create();
+    TerminalIn& Input = *terminal.in;
+    Input.begin();
 
     bool quit = false;
     while (!quit)
     {
-        input.select();
+        Input.select();
         while (1)
         {
-            int c = input.read();
+            int32 c = Input.read();
             if (c < 0)
                 break;
 
             if (c > 0x7f)
-                printf("\\x%02x", unsigned(c));
+                printf("\\x%02x", uint32(c));
             else if (c < 0x20)
                 printf("^%c", c|0x40);
             else
@@ -51,6 +51,6 @@ int input_echo(int argc, char** argv)
         puts("");
     }
 
-    input.end();
+    Input.end();
     return 0;
 }

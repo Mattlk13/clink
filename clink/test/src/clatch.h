@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include <stdio.h>
@@ -8,71 +8,71 @@
 namespace clatch {
 
 //------------------------------------------------------------------------------
-struct section
+struct Section
 {
-    void add_child(section* child) {
-        child->m_parent = this;
-        if (section* tail = m_child)
+    void add_child(Section* child) {
+        child->_parent = this;
+        if (Section* tail = _child)
         {
-            for (; tail->m_sibling != nullptr; tail = tail->m_sibling);
-            tail->m_sibling = child;
+            for (; tail->_sibling != nullptr; tail = tail->_sibling);
+            tail->_sibling = child;
         }
         else
-            m_child = child;
+            _child = child;
     }
 
-    void enter(section*& tree_iter, const char* name) {
-        m_name = name;
+    void enter(Section*& tree_iter, const char* name) {
+        _name = name;
 
-        if (m_parent == nullptr)
-            if (section* parent = get_outer_store())
+        if (_parent == nullptr)
+            if (Section* parent = get_outer_store())
                 parent->add_child(this);
 
-        for (; tree_iter->m_child != nullptr; tree_iter = tree_iter->m_child)
-            tree_iter->m_active = true;
-        tree_iter->m_active = true;
+        for (; tree_iter->_child != nullptr; tree_iter = tree_iter->_child)
+            tree_iter->_active = true;
+        tree_iter->_active = true;
 
         get_outer_store() = this;
     }
 
-    static section*&    get_outer_store() { static section* section; return section; }
-    void                leave() { get_outer_store() = m_parent; }
-    explicit            operator bool () { return m_active; }
-    const char*         m_name = "";
-    section*            m_parent = nullptr;
-    section*            m_child = nullptr;
-    section*            m_sibling = nullptr;
-    unsigned int        m_assert_count = 0;
-    bool                m_active = false;
+    static Section*&    get_outer_store() { static Section* section; return section; }
+    void                leave() { get_outer_store() = _parent; }
+    explicit            operator bool () { return _active; }
+    const char*         _name = "";
+    Section*            _parent = nullptr;
+    Section*            _child = nullptr;
+    Section*            _sibling = nullptr;
+    uint32              _assert_count = 0;
+    bool                _active = false;
 
-    struct scope
+    struct Scope
     {
-                        scope(section*& tree_iter, section& section, const char* name) : m_section(&section) { m_section->enter(tree_iter, name); }
-                        ~scope() { m_section->leave(); }
-        explicit        operator bool () { return bool(*m_section); }
-        section*        m_section;
+                        Scope(Section*& tree_iter, Section& section, const char* name) : _section(&section) { _section->enter(tree_iter, name); }
+                        ~Scope() { _section->leave(); }
+        explicit        operator bool () { return bool(*_section); }
+        Section*        _section;
     };
 };
 
 //------------------------------------------------------------------------------
-struct test
+struct Test
 {
-    typedef void        (test_func)(section*&);
-    static test*&       get_head() { static test* head; return head; }
-    static test*&       get_tail() { static test* tail; return tail; }
-    test*               m_next = nullptr;
-    test_func*          m_func;
-    const char*         m_name;
+    typedef void        (test_func)(Section*&);
+    static Test*&       get_head() { static Test* head; return head; }
+    static Test*&       get_tail() { static Test* tail; return tail; }
+    Test*               _next = nullptr;
+    test_func*          _func;
+    const char*         _name;
 
-    test(const char* name, test_func* func)
-    : m_name(name)
-    , m_func(func)
+    Test(const char* name, test_func* func)
+    : _name(name)
+    , _func(func)
     {
         if (get_head() == nullptr)
             get_head() = this;
 
-        if (test* tail = get_tail())
-            tail->m_next = this;
+        if (Test* tail = get_tail())
+            tail->_next = this;
         get_tail() = this;
     }
 };
@@ -80,36 +80,36 @@ struct test
 //------------------------------------------------------------------------------
 inline bool run(const char* prefix="")
 {
-    int fail_count = 0;
-    int test_count = 0;
-    int assert_count = 0;
+    int32 fail_count = 0;
+    int32 test_count = 0;
+    int32 assert_count = 0;
 
-    for (test* test = test::get_head(); test != nullptr; test = test->m_next)
+    for (Test* Test = Test::get_head(); Test != nullptr; Test = Test->_next)
     {
-        // Cheap lower-case prefix test.
-        const char* a = prefix, *b = test->m_name;
+        // Cheap lower-case prefix Test.
+        const char* a = prefix, *b = Test->_name;
         for (; (*a & ~0x20) == (*b & ~0x20); ++a, ++b);
         if (*a)
             continue;
 
         ++test_count;
-        printf("......... %s", test->m_name);
+        printf("......... %s", Test->_name);
 
-        section root;
+        Section root;
 
         try
         {
-            section* tree_iter = &root;
+            Section* tree_iter = &root;
             do
             {
-                section::scope x = section::scope(tree_iter, root, test->m_name);
+                Section::Scope x = Section::Scope(tree_iter, root, Test->_name);
 
-                (test->m_func)(tree_iter);
+                (Test->_func)(tree_iter);
 
-                for (section* parent; parent = tree_iter->m_parent; tree_iter = parent)
+                for (Section* parent; parent = tree_iter->_parent; tree_iter = parent)
                 {
-                    tree_iter->m_active = false;
-                    if (tree_iter = tree_iter->m_sibling)
+                    tree_iter->_active = false;
+                    if (tree_iter = tree_iter->_sibling)
                         break;
                 }
             }
@@ -118,11 +118,11 @@ inline bool run(const char* prefix="")
         catch (...)
         {
             ++fail_count;
-            assert_count += root.m_assert_count;
+            assert_count += root._assert_count;
             continue;
         }
 
-        assert_count += root.m_assert_count;
+        assert_count += root._assert_count;
         puts("\rok ");
     }
 
@@ -132,16 +132,16 @@ inline bool run(const char* prefix="")
 }
 
 //------------------------------------------------------------------------------
-inline void fail(const char* expr, const char* file, int line)
+inline void fail(const char* expr, const char* file, int32 line)
 {
-    section* failed_section = clatch::section::get_outer_store();
+    Section* failed_section = clatch::Section::get_outer_store();
 
     puts("\n");
     printf(" expr; %s\n", expr);
     printf("where; %s(%d)\n", file, line);
     printf("trace; ");
-    for (; failed_section != nullptr; failed_section = failed_section->m_parent)
-        printf("%s\n       ", failed_section->m_name);
+    for (; failed_section != nullptr; failed_section = failed_section->_parent)
+        printf("%s\n       ", failed_section->_name);
     puts("");
 
     throw std::exception();
@@ -149,7 +149,7 @@ inline void fail(const char* expr, const char* file, int line)
 
 //------------------------------------------------------------------------------
 template <typename CALLBACK>
-void fail(const char* expr, const char* file, int line, CALLBACK&& cb)
+void fail(const char* expr, const char* file, int32 line, CALLBACK&& cb)
 {
     puts("\n");
     cb();
@@ -164,20 +164,20 @@ void fail(const char* expr, const char* file, int line, CALLBACK&& cb)
 #define CLATCH_IDENT(d)      CLATCH_IDENT_(d, __LINE__)
 
 #define TEST_CASE(name)\
-    static void CLATCH_IDENT(test_func)(clatch::section*&);\
-    static clatch::test CLATCH_IDENT(test)(name, CLATCH_IDENT(test_func));\
-    static void CLATCH_IDENT(test_func)(clatch::section*& _clatch_tree_iter)
+    static void CLATCH_IDENT(test_func)(clatch::Section*&);\
+    static clatch::Test CLATCH_IDENT(Test)(name, CLATCH_IDENT(test_func));\
+    static void CLATCH_IDENT(test_func)(clatch::Section*& _clatch_tree_iter)
 
 #define SECTION(name)\
-    static clatch::section CLATCH_IDENT(section);\
-    if (clatch::section::scope CLATCH_IDENT(scope) = clatch::section::scope(_clatch_tree_iter, CLATCH_IDENT(section), name))
+    static clatch::Section CLATCH_IDENT(Section);\
+    if (clatch::Section::Scope CLATCH_IDENT(Scope) = clatch::Section::Scope(_clatch_tree_iter, CLATCH_IDENT(Section), name))
 
 
 #define REQUIRE(expr, ...)\
     do {\
-        auto* _clatch_s = clatch::section::get_outer_store();\
-        for (; _clatch_s->m_parent != nullptr; _clatch_s = _clatch_s->m_parent);\
-        ++_clatch_s->m_assert_count;\
+        auto* _clatch_s = clatch::Section::get_outer_store();\
+        for (; _clatch_s->_parent != nullptr; _clatch_s = _clatch_s->_parent);\
+        ++_clatch_s->_assert_count;\
         \
         if (!(expr))\
             clatch::fail(#expr, __FILE__, __LINE__, ##__VA_ARGS__);\

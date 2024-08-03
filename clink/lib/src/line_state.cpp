@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -8,78 +8,78 @@
 #include <core/str.h>
 
 //------------------------------------------------------------------------------
-line_state::line_state(
+LineState::LineState(
     const char* line,
-    unsigned int cursor,
-    unsigned int command_offset,
-    const array<word>& words)
-: m_words(words)
-, m_line(line)
-, m_cursor(cursor)
-, m_command_offset(command_offset)
+    uint32 cursor,
+    uint32 command_offset,
+    const Array<Word>& words)
+: _words(words)
+, _line(line)
+, _cursor(cursor)
+, _command_offset(command_offset)
 {
 }
 
 //------------------------------------------------------------------------------
-const char* line_state::get_line() const
+const char* LineState::get_line() const
 {
-    return m_line;
+    return _line;
 }
 
 //------------------------------------------------------------------------------
-unsigned int line_state::get_cursor() const
+uint32 LineState::get_cursor() const
 {
-    return m_cursor;
+    return _cursor;
 }
 
 //------------------------------------------------------------------------------
-unsigned int line_state::get_command_offset() const
+uint32 LineState::get_command_offset() const
 {
-    return m_command_offset;
+    return _command_offset;
 }
 
 //------------------------------------------------------------------------------
-const array<word>& line_state::get_words() const
+const Array<Word>& LineState::get_words() const
 {
-    return m_words;
+    return _words;
 }
 
 //------------------------------------------------------------------------------
-unsigned int line_state::get_word_count() const
+uint32 LineState::get_word_count() const
 {
-    return m_words.size();
+    return _words.size();
 }
 
 //------------------------------------------------------------------------------
-bool line_state::get_word(unsigned int index, str_base& out) const
+bool LineState::get_word(uint32 index, StrBase& out) const
 {
-    const word* word = m_words[index];
+    const Word* word = _words[index];
     if (word == nullptr)
         return false;
 
-    out.concat(m_line + word->offset, word->length);
+    out.concat(_line + word->offset, word->length);
     return true;
 }
 
 //------------------------------------------------------------------------------
-str_iter line_state::get_word(unsigned int index) const
+StrIter LineState::get_word(uint32 index) const
 {
-    if (const word* word = m_words[index])
-        return str_iter(m_line + word->offset, word->length);
+    if (const Word* word = _words[index])
+        return StrIter(_line + word->offset, word->length);
 
-    return str_iter();
+    return StrIter();
 }
 
 //------------------------------------------------------------------------------
-bool line_state::get_end_word(str_base& out) const
+bool LineState::get_end_word(StrBase& out) const
 {
-    int n = get_word_count();
+    int32 n = get_word_count();
     return (n ? get_word(n - 1, out) : false);
 }
 
 //------------------------------------------------------------------------------
-str_iter line_state::get_end_word() const
+StrIter LineState::get_end_word() const
 {
-    int n = get_word_count();
-    return (n ? get_word(n - 1) : str_iter());
+    int32 n = get_word_count();
+    return (n ? get_word(n - 1) : StrIter());
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -13,14 +13,14 @@
 #include <process/process.h>
 
 //------------------------------------------------------------------------------
-extern setting_bool g_glob_hidden;
-extern setting_bool g_glob_system;
-extern setting_bool g_glob_unc;
+extern SettingBool g_glob_hidden;
+extern SettingBool g_glob_system;
+extern SettingBool g_glob_unc;
 
 
 
 //------------------------------------------------------------------------------
-static const char* get_string(lua_State* state, int index)
+static const char* get_string(lua_State* state, int32 index)
 {
     if (lua_gettop(state) < index || !lua_isstring(state, index))
         return nullptr;
@@ -32,7 +32,7 @@ static const char* get_string(lua_State* state, int index)
 /// -name:  os.chdir
 /// -arg:   path:string
 /// -ret:   boolean
-static int set_current_dir(lua_State* state)
+static int32 set_current_dir(lua_State* state)
 {
     bool ok = false;
     if (const char* dir = get_string(state, 1))
@@ -45,9 +45,9 @@ static int set_current_dir(lua_State* state)
 //------------------------------------------------------------------------------
 /// -name:  os.getcwd
 /// -ret:   string
-static int get_current_dir(lua_State* state)
+static int32 get_current_dir(lua_State* state)
 {
-    str<288> dir;
+    Str<288> dir;
     os::get_current_dir(dir);
 
     lua_pushstring(state, dir.c_str());
@@ -58,7 +58,7 @@ static int get_current_dir(lua_State* state)
 /// -name:  os.mkdir
 /// -arg:   path:string
 /// -ret:   boolean
-static int make_dir(lua_State* state)
+static int32 make_dir(lua_State* state)
 {
     bool ok = false;
     if (const char* dir = get_string(state, 1))
@@ -72,7 +72,7 @@ static int make_dir(lua_State* state)
 /// -name:  os.rmdir
 /// -arg:   path:string
 /// -ret:   boolean
-static int remove_dir(lua_State* state)
+static int32 remove_dir(lua_State* state)
 {
     bool ok = false;
     if (const char* dir = get_string(state, 1))
@@ -86,7 +86,7 @@ static int remove_dir(lua_State* state)
 /// -name:  os.isdir
 /// -arg:   path:string
 /// -ret:   boolean
-static int is_dir(lua_State* state)
+static int32 is_dir(lua_State* state)
 {
     const char* path = get_string(state, 1);
     if (path == nullptr)
@@ -100,7 +100,7 @@ static int is_dir(lua_State* state)
 /// -name:  os.isfile
 /// -arg:   path:string
 /// -ret:   boolean
-static int is_file(lua_State* state)
+static int32 is_file(lua_State* state)
 {
     const char* path = get_string(state, 1);
     if (path == nullptr)
@@ -114,7 +114,7 @@ static int is_file(lua_State* state)
 /// -name:  os.unlink
 /// -arg:   path:string
 /// -ret:   boolean
-static int unlink(lua_State* state)
+static int32 unlink(lua_State* state)
 {
     const char* path = get_string(state, 1);
     if (path == nullptr)
@@ -137,7 +137,7 @@ static int unlink(lua_State* state)
 /// -arg:   src:string
 /// -arg:   dest:string
 /// -ret:   boolean
-static int move(lua_State* state)
+static int32 move(lua_State* state)
 {
     const char* src = get_string(state, 1);
     const char* dest = get_string(state, 2);
@@ -158,7 +158,7 @@ static int move(lua_State* state)
 /// -arg:   src:string
 /// -arg:   dest:string
 /// -ret:   boolean
-static int copy(lua_State* state)
+static int32 copy(lua_State* state)
 {
     const char* src = get_string(state, 1);
     const char* dest = get_string(state, 2);
@@ -170,31 +170,43 @@ static int copy(lua_State* state)
 }
 
 //------------------------------------------------------------------------------
-static int glob_impl(lua_State* state, bool dirs_only)
+static int32 glob_impl(lua_State* state, bool dirs_only)
 {
+    auto not_ok = [=] () {
+        lua_pushcclosure(state, [] (lua_State*) -> int32 { return 0; }, 0);
+        return 1;
+    };
+
     const char* mask = get_string(state, 1);
     if (mask == nullptr)
-        return 0;
-
-    lua_createtable(state, 0, 0);
+        return not_ok();
 
     if (path::is_separator(mask[0]) && path::is_separator(mask[1]))
         if (!g_glob_unc.get())
-            return 1;
+            return not_ok();
 
-    globber globber(mask);
-    globber.files(!dirs_only);
-    globber.hidden(g_glob_hidden.get());
-    globber.system(g_glob_system.get());
+    auto impl = [] (lua_State* state) -> int32 {
+        int32 self_index = lua_upvalueindex(1);
+        auto* glbbr = (Globber*)lua_touserdata(state, self_index);
 
-    int i = 1;
-    str<288> file;
-    while (globber.next(file, false))
-    {
+        Str<288> file;
+        if (!glbbr->next(file, false))
+        {
+            delete glbbr;
+            return 0;
+        }
+
         lua_pushstring(state, file.c_str());
-        lua_rawseti(state, -2, i++);
-    }
+        return 1;
+    };
 
+    Globber* glbbr = new Globber(mask);
+    glbbr->files(!dirs_only);
+    glbbr->hidden(g_glob_hidden.get());
+    glbbr->system(g_glob_system.get());
+
+    lua_pushlightuserdata(state, glbbr);
+    lua_pushcclosure(state, impl, 1);
     return 1;
 }
 
@@ -202,7 +214,7 @@ static int glob_impl(lua_State* state, bool dirs_only)
 /// -name:  os.globdirs
 /// -arg:   globpattern:string
 /// -ret:   table
-static int glob_dirs(lua_State* state)
+static int32 glob_dirs(lua_State* state)
 {
     return glob_impl(state, true);
 }
@@ -211,7 +223,7 @@ static int glob_dirs(lua_State* state)
 /// -name:  os.globfiles
 /// -arg:   globpattern:string
 /// -ret:   table
-static int glob_files(lua_State* state)
+static int32 glob_files(lua_State* state)
 {
     return glob_impl(state, false);
 }
@@ -220,13 +232,13 @@ static int glob_files(lua_State* state)
 /// -name:  os.getenv
 /// -arg:   path:string
 /// -ret:   string or nil
-static int get_env(lua_State* state)
+static int32 get_env(lua_State* state)
 {
     const char* name = get_string(state, 1);
     if (name == nullptr)
         return 0;
 
-    str<128> value;
+    Str<128> value;
     if (!os::get_env(name, value))
         return 0;
 
@@ -239,7 +251,7 @@ static int get_env(lua_State* state)
 /// -arg:   name:string
 /// -arg:   value:string
 /// -ret:   boolean
-static int set_env(lua_State* state)
+static int32 set_env(lua_State* state)
 {
     const char* name = get_string(state, 1);
     const char* value = get_string(state, 2);
@@ -254,7 +266,7 @@ static int set_env(lua_State* state)
 //------------------------------------------------------------------------------
 /// -name:  os.getenvnames
 /// -ret:   table
-static int get_env_names(lua_State* state)
+static int32 get_env_names(lua_State* state)
 {
     lua_createtable(state, 0, 0);
 
@@ -263,7 +275,7 @@ static int get_env_names(lua_State* state)
         return 1;
 
     char* strings = root;
-    int i = 1;
+    int32 i = 1;
     while (*strings)
     {
         // Skip env vars that start with a '='. They're hidden ones.
@@ -293,10 +305,10 @@ static int get_env_names(lua_State* state)
 //------------------------------------------------------------------------------
 /// -name:  os.gethost
 /// -ret:   string
-static int get_host(lua_State* state)
+static int32 get_host(lua_State* state)
 {
-    str<280> host;
-    if (process().get_file_name(host))
+    Str<280> host;
+    if (Process().get_file_name(host))
         return 0;
 
     lua_pushstring(state, host.c_str());
@@ -306,31 +318,31 @@ static int get_host(lua_State* state)
 //------------------------------------------------------------------------------
 /// -name:  os.getaliases
 /// -ret:   string
-static int get_aliases(lua_State* state)
+static int32 get_aliases(lua_State* state)
 {
     lua_createtable(state, 0, 0);
 
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
-    str<280> path;
-    if (!process().get_file_name(path))
+    Str<280> path;
+    if (!Process().get_file_name(path))
         return 1;
 
     // Not const because Windows' alias API won't accept it.
     char* name = (char*)path::get_name(path.c_str());
 
-    // Get the aliases (aka. doskey macros).
-    int buffer_size = GetConsoleAliasesLength(name);
+    // Get the aliases (aka. Doskey macros).
+    int32 buffer_size = GetConsoleAliasesLength(name);
     if (buffer_size == 0)
         return 1;
 
-    str<> buffer;
+    Str<> buffer;
     buffer.reserve(buffer_size);
     if (GetConsoleAliases(buffer.data(), buffer.size(), name) == 0)
         return 1;
 
     // Parse the result into a lua table.
     const char* alias = buffer.c_str();
-    for (int i = 1; int(alias - buffer.c_str()) < buffer_size; ++i)
+    for (int32 i = 1; int32(alias - buffer.c_str()) < buffer_size; ++i)
     {
         const char* c = strchr(alias, '=');
         if (c == nullptr)
@@ -348,11 +360,11 @@ static int get_aliases(lua_State* state)
 }
 
 //------------------------------------------------------------------------------
-void os_lua_initialise(lua_state& lua)
+void os_lua_initialise(LuaState& lua)
 {
     struct {
         const char* name;
-        int         (*method)(lua_State*);
+        int32       (*method)(lua_State*);
     } methods[] = {
         { "chdir",       &set_current_dir },
         { "getcwd",      &get_current_dir },

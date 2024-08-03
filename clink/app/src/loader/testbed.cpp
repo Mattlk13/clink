@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -8,14 +8,14 @@
 #include <lib/match_generator.h>
 
 //------------------------------------------------------------------------------
-int testbed(int, char**)
+int32 testbed(int32, char**)
 {
-    str_compare_scope _(str_compare_scope::relaxed);
+    StrCompareScope _(StrCompareScope::relaxed);
 
-    editor_module* completer = tab_completer_create();
+    EditorModule* completer = tab_completer_create();
 
-    line_editor::desc desc;
-    line_editor* editor = line_editor_create(desc);
+    LineEditor::Desc desc;
+    LineEditor* editor = line_editor_create(desc);
     editor->add_module(*completer);
     editor->add_generator(file_match_generator());
 

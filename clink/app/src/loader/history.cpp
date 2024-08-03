@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -15,53 +15,53 @@
 #include <stdlib.h>
 
 //------------------------------------------------------------------------------
-void puts_help(const char**, int);
+void puts_help(const char**, int32);
 
 //------------------------------------------------------------------------------
-class history_scope
+class HistoryScope
 {
 public:
-                    history_scope();
-    history_db*     operator -> ()      { return &m_history; }
-    history_db&     operator * ()       { return m_history; }
+                    HistoryScope();
+    HistoryDb*      operator -> ()      { return &_history; }
+    HistoryDb&      operator * ()       { return _history; }
 
 private:
-    str<280>        m_path;
-    history_db      m_history;
+    Str<280>        _path;
+    HistoryDb       _history;
 };
 
 //------------------------------------------------------------------------------
-history_scope::history_scope()
+HistoryScope::HistoryScope()
 {
     // Load settings.
-    app_context::get()->get_settings_path(m_path);
-    settings::load(m_path.c_str());
+    AppContext::get()->get_settings_path(_path);
+    settings::load(_path.c_str());
 
-    m_history.initialise();
+    _history.initialise();
 }
 
 
 
 //------------------------------------------------------------------------------
-static void print_history(unsigned int tail_count)
+static void print_history(uint32 tail_count)
 {
-    history_scope history;
+    HistoryScope history;
 
-    str_iter line;
-    char buffer[history_db::max_line_length];
+    StrIter line;
+    char buffer[HistoryDb::max_line_length];
 
-    int count = 0;
+    int32 count = 0;
     {
-        history_db::iter iter = history->read_lines(buffer);
+        HistoryDb::Iter iter = history->read_lines(buffer);
         while (iter.next(line))
             ++count;
     }
 
-    int index = 1;
-    history_db::iter iter = history->read_lines(buffer);
+    int32 index = 1;
+    HistoryDb::Iter iter = history->read_lines(buffer);
 
-    int skip = count - tail_count;
-    for (int i = 0; i < skip; ++i, ++index, iter.next(line));
+    int32 skip = count - tail_count;
+    for (int32 i = 0; i < skip; ++i, ++index, iter.next(line));
 
     for (; iter.next(line); ++index)
         printf("%5d  %.*s\n", index, line.length(), line.get_pointer());
@@ -78,7 +78,7 @@ static bool print_history(const char* arg)
 
     // Check the argument is just digits.
     for (const char* c = arg; *c; ++c)
-        if (unsigned(*c - '0') > 10)
+        if (uint32(*c - '0') > 10)
             return false;
 
     print_history(atoi(arg));
@@ -86,9 +86,9 @@ static bool print_history(const char* arg)
 }
 
 //------------------------------------------------------------------------------
-static int add(const char* line)
+static int32 add(const char* line)
 {
-    history_scope history;
+    HistoryScope history;
     history->add(line);
 
     printf("Added '%s' to history.\n", line);
@@ -96,19 +96,19 @@ static int add(const char* line)
 }
 
 //------------------------------------------------------------------------------
-static int remove(int index)
+static int32 remove(int32 index)
 {
-    history_scope history;
+    HistoryScope history;
 
     if (index <= 0)
         return 1;
 
-    char buffer[history_db::max_line_length];
-    history_db::line_id line_id = 0;
+    char buffer[HistoryDb::max_line_length];
+    HistoryDb::LineId line_id = 0;
     {
-        str_iter line;
-        history_db::iter iter = history->read_lines(buffer);
-        for (int i = index - 1; i > 0 && iter.next(line); --i);
+        StrIter line;
+        HistoryDb::Iter iter = history->read_lines(buffer);
+        for (int32 i = index - 1; i > 0 && iter.next(line); --i);
 
         line_id = iter.next(line);
     }
@@ -121,9 +121,9 @@ static int remove(int index)
 }
 
 //------------------------------------------------------------------------------
-static int clear()
+static int32 clear()
 {
-    history_scope history;
+    HistoryScope history;
     history->clear();
 
     puts("History cleared.");
@@ -131,18 +131,18 @@ static int clear()
 }
 
 //------------------------------------------------------------------------------
-static int print_expansion(const char* line)
+static int32 print_expansion(const char* line)
 {
-    history_scope history;
+    HistoryScope history;
     history->load_rl_history();
-    str<> out;
+    Str<> out;
     history->expand(line, out);
     puts(out.c_str());
     return 0;
 }
 
 //------------------------------------------------------------------------------
-static int print_help()
+static int32 print_help()
 {
     extern const char* g_clink_header;
 
@@ -167,9 +167,9 @@ static int print_help()
 }
 
 //------------------------------------------------------------------------------
-static void get_line(int start, int end, char** argv, str_base& out)
+static void get_line(int32 start, int32 end, char** argv, StrBase& out)
 {
-    for (int j = start; j < end; ++j)
+    for (int32 j = start; j < end; ++j)
     {
         if (!out.empty())
             out << " ";
@@ -179,9 +179,9 @@ static void get_line(int start, int end, char** argv, str_base& out)
 }
 
 //------------------------------------------------------------------------------
-static int history_bash(int argc, char** argv)
+static int32 history_bash(int32 argc, char** argv)
 {
-    int i;
+    int32 i;
     while ((i = getopt(argc, argv, "+cd:ps")) != -1)
     {
         switch (i)
@@ -195,7 +195,7 @@ static int history_bash(int argc, char** argv)
         case 'p': // print expansion
         case 's': // add to history
             {
-                str<> line;
+                Str<> line;
                 get_line(optind, argc, argv, line);
                 if (line.empty())
                     return print_help();
@@ -216,15 +216,15 @@ static int history_bash(int argc, char** argv)
 }
 
 //------------------------------------------------------------------------------
-int history(int argc, char** argv)
+int32 history(int32 argc, char** argv)
 {
     // Check to see if the user asked from some help!
-    for (int i = 1; i < argc; ++i)
+    for (int32 i = 1; i < argc; ++i)
         if (_stricmp(argv[1], "--help") == 0 || _stricmp(argv[1], "-h") == 0)
             return print_help();
 
     // Try Bash-style arguments first...
-    int bash_ret = history_bash(argc, argv);
+    int32 bash_ret = history_bash(argc, argv);
     if (optind != 1)
         return bash_ret;
 
@@ -249,7 +249,7 @@ int history(int argc, char** argv)
                 return remove(atoi(argv[2]));
         }
 
-        str<> line;
+        Str<> line;
 
         // 'add' command
         if (_stricmp(verb, "add") == 0)

@@ -1,19 +1,20 @@
-// Copyright (c) 2018 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
-class screen_buffer;
-class terminal_in;
-class terminal_out;
+class ScreenBuffer;
+class TerminalIn;
+class TerminalOut;
 
 //------------------------------------------------------------------------------
-struct terminal
+struct Terminal
 {
-    terminal_in*    in;
-    terminal_out*   out;
+    TerminalIn*     in;
+    TerminalOut*    out;
+    uintptr_t       impl;
 };
 
 //------------------------------------------------------------------------------
-terminal            terminal_create(screen_buffer* screen=nullptr);
-void                terminal_destroy(const terminal& terminal);
+Terminal            terminal_create(ScreenBuffer* screen=nullptr);
+void                terminal_destroy(const Terminal& terminal);

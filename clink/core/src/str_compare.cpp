@@ -1,26 +1,26 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
 #include "str_compare.h"
 
-threadlocal int str_compare_scope::ts_mode = str_compare_scope::exact;
+threadlocal int32 StrCompareScope::ts_mode = StrCompareScope::exact;
 
 //------------------------------------------------------------------------------
-str_compare_scope::str_compare_scope(int mode)
+StrCompareScope::StrCompareScope(int32 mode)
 {
-    m_prev_mode = ts_mode;
+    _prev_mode = ts_mode;
     ts_mode = mode;
 }
 
 //------------------------------------------------------------------------------
-str_compare_scope::~str_compare_scope()
+StrCompareScope::~StrCompareScope()
 {
-    ts_mode = m_prev_mode;
+    ts_mode = _prev_mode;
 }
 
 //------------------------------------------------------------------------------
-int str_compare_scope::current()
+int32 StrCompareScope::current()
 {
     return ts_mode;
 }

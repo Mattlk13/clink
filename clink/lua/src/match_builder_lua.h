@@ -1,25 +1,25 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 #include "lua_bindable.h"
 
-class match_builder;
+class MatchBuilder;
 struct lua_State;
 
 //------------------------------------------------------------------------------
-class match_builder_lua
-    : public lua_bindable<match_builder_lua>
+class MatchBuilderLua
+    : public LuaBindable<MatchBuilderLua>
 {
 public:
-                    match_builder_lua(match_builder& builder);
-                    ~match_builder_lua();
-    int             add_match(lua_State* state);
-    int             add_matches(lua_State* state);
-    int             set_prefix_included(lua_State* state);
+                    MatchBuilderLua(MatchBuilder& Builder);
+                    ~MatchBuilderLua();
+    int32           add_match(lua_State* state);
+    int32           add_matches(lua_State* state);
+    int32           set_prefix_included(lua_State* state);
 
 private:
-    bool            add_match_impl(lua_State* state, int stack_index);
-    match_builder&  m_builder;
+    bool            add_match_impl(lua_State* state, int32 stack_index);
+    MatchBuilder&   _builder;
 };

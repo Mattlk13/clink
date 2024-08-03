@@ -1,17 +1,17 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 //------------------------------------------------------------------------------
-class env_fixture
+class EnvFixture
 {
 public:
-                    env_fixture(const char** env);
-                    ~env_fixture();
+                    EnvFixture(const char** env);
+                    ~EnvFixture();
 
 protected:
     void            convert_eq_to_null(wchar_t* env_strings);
     void            clear();
-    wchar_t*        m_env_strings;
+    wchar_t*        _env_strings;
 };

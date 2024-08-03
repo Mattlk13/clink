@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -11,38 +11,38 @@ static const char* colour_bg_values = COLOUR_XS "default";
 #undef COLOUR_X
 
 //------------------------------------------------------------------------------
-setting_colour::setting_colour(
+SettingColour::SettingColour(
     const char* name,
     const char* short_desc,
-    int default_fg,
-    int default_bg)
-: setting_colour(name, short_desc, nullptr, default_fg, default_bg)
+    int32 default_fg,
+    int32 default_bg)
+: SettingColour(name, short_desc, nullptr, default_fg, default_bg)
 {
 }
 
 //------------------------------------------------------------------------------
-setting_colour::setting_colour(
+SettingColour::SettingColour(
     const char* name,
     const char* short_desc,
     const char* long_desc,
-    int default_fg,
-    int default_bg)
+    int32 default_fg,
+    int32 default_bg)
 {
-    str<64> inner_name;
+    Str<64> inner_name;
     inner_name << name << ".fg";
-    m_fg.construct(inner_name.c_str(), short_desc, long_desc, colour_fg_values, default_fg);
+    _fg.construct(inner_name.c_str(), short_desc, long_desc, colour_fg_values, default_fg);
 
     inner_name.clear();
     inner_name << name << ".bg";
-    m_bg.construct(inner_name.c_str(), short_desc, long_desc, colour_bg_values, default_bg);
+    _bg.construct(inner_name.c_str(), short_desc, long_desc, colour_bg_values, default_bg);
 }
 
 //------------------------------------------------------------------------------
-attributes setting_colour::get() const
+Attributes SettingColour::get() const
 {
-    attributes out = attributes::defaults;
+    Attributes out = Attributes::defaults;
 
-    int fg = m_fg->get();
+    int32 fg = _fg->get();
     switch (fg)
     {
     case value_fg_normal:   out.set_bold(false);    break;
@@ -51,7 +51,7 @@ attributes setting_colour::get() const
     default:                out.set_fg(fg);         break;
     }
 
-    int bg = m_bg->get();
+    int32 bg = _bg->get();
     switch (bg)
     {
     case value_bg_default:  out.reset_bg();         break;

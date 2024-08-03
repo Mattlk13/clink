@@ -1,62 +1,62 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 #include <core/array.h>
 
-class editor_module;
+class EditorModule;
 
 //------------------------------------------------------------------------------
-class binder
+class Binder
 {
 public:
-                        binder();
-    int                 get_group(const char* name=nullptr);
-    int                 create_group(const char* name);
-    bool                bind(unsigned int group, const char* chord, editor_module& module, unsigned char id);
+                        Binder();
+    int32               get_group(const char* name=nullptr);
+    int32               create_group(const char* name);
+    bool                bind(uint32 group, const char* chord, EditorModule& module, uint8 id);
 
 private:
-    static const int    link_bits = 9;
-    static const int    module_bits = 6;
+    static const int32  link_bits = 9;
+    static const int32  module_bits = 6;
 
-    struct node
+    struct Node
     {
-        unsigned short  is_group    : 1;
-        unsigned short  next        : link_bits;
-        unsigned short  module      : module_bits;
+        uint16          is_group    : 1;
+        uint16          next        : link_bits;
+        uint16          module      : module_bits;
 
-        unsigned short  child       : link_bits;
-        unsigned short  depth       : 4;
-        unsigned short  bound       : 1;
-        unsigned short              : 2;
+        uint16          child       : link_bits;
+        uint16          depth       : 4;
+        uint16          bound       : 1;
+        uint16                      : 2;
 
-        unsigned char   key;
-        unsigned char   id;
+        uint8           key;
+        uint8           id;
     };
 
-    struct group_node
+    struct GroupNode
     {
-        unsigned short  is_group    : 1;
-        unsigned short  next        : link_bits;
-        unsigned short              : 6;
-        unsigned short  hash[2];
+        uint16          is_group    : 1;
+        uint16          next        : link_bits;
+        uint16                      : 6;
+        uint16          hash[2];
     };
 
-    typedef fixed_array<editor_module*, (1 << module_bits)> modules;
+    typedef FixedArray<EditorModule*, (1 << module_bits)> Modules;
 
-    friend class        bind_resolver;
-    int                 insert_child(int parent, unsigned char key);
-    int                 find_child(int parent, unsigned char key) const;
-    int                 add_child(int parent, unsigned char key);
-    int                 find_tail(int head);
-    int                 append(int head, unsigned char key);
-    const node&         get_node(unsigned int index) const;
-    group_node*         get_group_node(unsigned int index);
-    int                 alloc_nodes(unsigned int count=1);
-    int                 add_module(editor_module& module);
-    editor_module*      get_module(unsigned int index) const;
-    modules             m_modules;
-    node                m_nodes[1 << link_bits];
-    unsigned int        m_next_node;
+    friend class        BindResolver;
+    int32               insert_child(int32 parent, uint8 key);
+    int32               find_child(int32 parent, uint8 key) const;
+    int32               add_child(int32 parent, uint8 key);
+    int32               find_tail(int32 head);
+    int32               append(int32 head, uint8 key);
+    const Node&         get_node(uint32 index) const;
+    GroupNode*          get_group_node(uint32 index);
+    int32               alloc_nodes(uint32 count=1);
+    int32               add_module(EditorModule& module);
+    EditorModule*       get_module(uint32 index) const;
+    Modules             _modules;
+    Node                _nodes[1 << link_bits];
+    uint32              _next_node;
 };

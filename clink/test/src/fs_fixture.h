@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -6,15 +6,15 @@
 #include <core/str.h>
 
 //------------------------------------------------------------------------------
-class fs_fixture
+class FsFixture
 {
 public:
-                    fs_fixture(const char** fs=nullptr);
-                    ~fs_fixture();
+                    FsFixture(const char** fs=nullptr);
+                    ~FsFixture();
     const char*     get_root() const;
 
 private:
     void            clean(const char* path);
-    str<>           m_root;
-    const char**    m_fs;
+    Str<>           _root;
+    const char**    _fs;
 };

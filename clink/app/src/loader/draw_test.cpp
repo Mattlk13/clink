@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -13,13 +13,13 @@
 #include <xmmintrin.h>
 
 //------------------------------------------------------------------------------
-struct handle
+struct Handle
 {
-           handle()                 = default;
-           handle(const handle&)    = delete;
-           handle(const handle&&)   = delete;
-           handle(HANDLE h)         { value = (h == INVALID_HANDLE_VALUE) ? nullptr : h; }
-           ~handle()                { close(); }
+           Handle()                 = default;
+           Handle(const Handle&)    = delete;
+           Handle(const Handle&&)   = delete;
+           Handle(HANDLE h)         { value = (h == INVALID_HANDLE_VALUE) ? nullptr : h; }
+           ~Handle()                { close(); }
            operator HANDLE () const { return value; }
     void   operator = (HANDLE h)    { close(); value = h; }
     void   close()                  { if (value != nullptr) CloseHandle(value); }
@@ -29,7 +29,7 @@ struct handle
 
 
 //------------------------------------------------------------------------------
-class test_editor
+class TestEditor
 {
 public:
     void            start(const char* prompt);
@@ -37,43 +37,43 @@ public:
     void            press_keys(const char* keys);
 
 private:
-    terminal        m_terminal;
-    line_editor*    m_editor;
-    handle          m_thread;
+    Terminal        _terminal;
+    LineEditor*     _editor;
+    Handle          _thread;
 };
 
 //------------------------------------------------------------------------------
-void test_editor::start(const char* prompt)
+void TestEditor::start(const char* prompt)
 {
-    m_terminal = terminal_create();
+    _terminal = terminal_create();
 
-    line_editor::desc desc = {};
-    desc.input = m_terminal.in;
-    desc.output = m_terminal.out;
+    LineEditor::Desc desc = {};
+    desc.input = _terminal.in;
+    desc.output = _terminal.out;
     desc.prompt = prompt;
-    m_editor = line_editor_create(desc);
+    _editor = line_editor_create(desc);
 
     auto thread = [] (void* param) -> DWORD {
-        auto* self = (test_editor*)param;
+        auto* self = (TestEditor*)param;
         char c;
-        self->m_editor->edit(&c, sizeof(c));
+        self->_editor->edit(&c, sizeof(c));
         return 0;
     };
 
-    m_thread = CreateThread(nullptr, 0, thread, this, 0, nullptr);
+    _thread = CreateThread(nullptr, 0, thread, this, 0, nullptr);
 }
 
 //------------------------------------------------------------------------------
-void test_editor::end()
+void TestEditor::end()
 {
     press_keys("\n");
-    WaitForSingleObject(m_thread, INFINITE);
-    line_editor_destroy(m_editor);
-    terminal_destroy(m_terminal);
+    WaitForSingleObject(_thread, INFINITE);
+    line_editor_destroy(_editor);
+    terminal_destroy(_terminal);
 }
 
 //------------------------------------------------------------------------------
-void test_editor::press_keys(const char* keys)
+void TestEditor::press_keys(const char* keys)
 {
     HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
     DWORD written;
@@ -81,7 +81,7 @@ void test_editor::press_keys(const char* keys)
     INPUT_RECORD input_record = { KEY_EVENT };
     KEY_EVENT_RECORD& key_event = input_record.Event.KeyEvent;
     key_event.bKeyDown = TRUE;
-    while (int c = *keys++)
+    while (int32 c = *keys++)
     {
         key_event.uChar.UnicodeChar = wchar_t(c);
         WriteConsoleInput(handle, &input_record, 1, &written);
@@ -91,74 +91,74 @@ void test_editor::press_keys(const char* keys)
 
 
 //------------------------------------------------------------------------------
-class test_console
+class TestConsole
 {
 public:
-            test_console();
-            ~test_console();
-    void    resize(int columns) { resize(columns, m_rows); }
-    void    resize(int columns, int rows);
-    int     get_columns() const { return m_columns; }
-    int     get_rows() const    { return m_rows; }
+            TestConsole();
+            ~TestConsole();
+    void    resize(int32 columns) { resize(columns, _rows); }
+    void    resize(int32 columns, int32 rows);
+    int32   get_columns() const { return _columns; }
+    int32   get_rows() const    { return _rows; }
 
 private:
-    handle  m_handle;
-    HANDLE  m_prev_handle;
-    int     m_columns;
-    int     m_rows;
+    Handle  _handle;
+    HANDLE  _prev_handle;
+    int32   _columns;
+    int32   _rows;
 };
 
 //------------------------------------------------------------------------------
-test_console::test_console()
-: m_prev_handle(GetStdHandle(STD_OUTPUT_HANDLE))
+TestConsole::TestConsole()
+: _prev_handle(GetStdHandle(STD_OUTPUT_HANDLE))
 {
-    m_handle = CreateConsoleScreenBuffer(GENERIC_WRITE|GENERIC_READ, 3, nullptr,
+    _handle = CreateConsoleScreenBuffer(GENERIC_WRITE|GENERIC_READ, 3, nullptr,
         CONSOLE_TEXTMODE_BUFFER, nullptr);
 
     COORD cursor_pos = { 0, 0 };
-    SetConsoleCursorPosition(m_handle, cursor_pos);
+    SetConsoleCursorPosition(_handle, cursor_pos);
 
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(m_handle , &csbi);
-    m_columns = csbi.dwSize.X;
-    m_rows = csbi.dwSize.Y;
+    GetConsoleScreenBufferInfo(_handle , &csbi);
+    _columns = csbi.dwSize.X;
+    _rows = csbi.dwSize.Y;
 
-    SetConsoleActiveScreenBuffer(m_handle);
-    SetStdHandle(STD_OUTPUT_HANDLE, m_handle);
+    SetConsoleActiveScreenBuffer(_handle);
+    SetStdHandle(STD_OUTPUT_HANDLE, _handle);
 }
 
 //------------------------------------------------------------------------------
-test_console::~test_console()
+TestConsole::~TestConsole()
 {
-    SetStdHandle(STD_OUTPUT_HANDLE, m_prev_handle);
+    SetStdHandle(STD_OUTPUT_HANDLE, _prev_handle);
 }
 
 //------------------------------------------------------------------------------
-void test_console::resize(int columns, int rows)
+void TestConsole::resize(int32 columns, int32 rows)
 {
-    SMALL_RECT rect = { 0, 0, short(columns - 1), short(rows - 1) };
-    COORD size = { short(columns), short(rows) };
+    SMALL_RECT rect = { 0, 0, int16(columns - 1), int16(rows - 1) };
+    COORD size = { int16(columns), int16(rows) };
 
-    SetConsoleWindowInfo(m_handle, TRUE, &rect);
-    SetConsoleScreenBufferSize(m_handle, size);
-    SetConsoleWindowInfo(m_handle, TRUE, &rect);
+    SetConsoleWindowInfo(_handle, TRUE, &rect);
+    SetConsoleScreenBufferSize(_handle, size);
+    SetConsoleWindowInfo(_handle, TRUE, &rect);
 
-    m_columns = columns;
-    m_rows = rows;
+    _columns = columns;
+    _rows = rows;
 }
 
 
 
 //------------------------------------------------------------------------------
-class stepper
+class Stepper
 {
 public:
-                    stepper(int timeout_ms);
-                    ~stepper();
+                    Stepper(int32 timeout_ms);
+                    ~Stepper();
     bool            step();
 
 private:
-    enum state
+    enum State
     {
         state_running,
         state_step,
@@ -167,33 +167,33 @@ private:
     };
 
     void            run_input_thread();
-    handle          m_input_thread;
-    volatile state  m_state;
-    int             m_timeout_ms;
+    Handle          _input_thread;
+    volatile State  _state;
+    int32           _timeout_ms;
 };
 
 //------------------------------------------------------------------------------
-stepper::stepper(int timeout_ms)
-: m_state(state_running)
-, m_timeout_ms(timeout_ms)
+Stepper::Stepper(int32 timeout_ms)
+: _state(state_running)
+, _timeout_ms(timeout_ms)
 {
     auto thunk = [] (void* param) -> DWORD {
-        auto* self = (stepper*)param;
+        auto* self = (Stepper*)param;
         self->run_input_thread();
         return 0;
     };
 
-    m_input_thread = CreateThread(nullptr, 0, thunk, this, 0, nullptr);
+    _input_thread = CreateThread(nullptr, 0, thunk, this, 0, nullptr);
 }
 
 //------------------------------------------------------------------------------
-stepper::~stepper()
+Stepper::~Stepper()
 {
-    TerminateThread(m_input_thread, 0);
+    TerminateThread(_input_thread, 0);
 }
 
 //------------------------------------------------------------------------------
-void stepper::run_input_thread()
+void Stepper::run_input_thread()
 {
 /*
     HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -203,7 +203,7 @@ void stepper::run_input_thread()
         INPUT_RECORD record;
         if (!ReadConsoleInputW(stdin_handle, &record, 1, &count))
         {
-            m_state = state_quit;
+            _state = state_quit;
             break;
         }
 
@@ -216,70 +216,70 @@ void stepper::run_input_thread()
 
         switch (key_event.wVirtualKeyCode)
         {
-        case VK_ESCAPE: m_state = state_quit; break;
-        case VK_SPACE:  m_state = state_step; break;
+        case VK_ESCAPE: _state = state_quit; break;
+        case VK_SPACE:  _state = state_step; break;
         }
     }
 */
 }
 
 //------------------------------------------------------------------------------
-bool stepper::step()
+bool Stepper::step()
 {
-    switch (m_state)
+    switch (_state)
     {
-    case state_paused:  while (m_state == state_paused) Sleep(10); break;
-    case state_running: Sleep(m_timeout_ms); break;
-    case state_step:    m_state = state_paused; break;
+    case state_paused:  while (_state == state_paused) Sleep(10); break;
+    case state_running: Sleep(_timeout_ms); break;
+    case state_step:    _state = state_paused; break;
     }
 
-    return (m_state != state_quit);
+    return (_state != state_quit);
 }
 
 
 
 //------------------------------------------------------------------------------
-class runner
+class Runner
 {
 public:
-                        runner();
+                        Runner();
     void                go();
 
 private:
     bool                step();
     void                ecma48_test();
     void                line_test();
-    test_console        m_console;
-    stepper             m_stepper;
+    TestConsole         _console;
+    Stepper             _stepper;
 };
 
 //------------------------------------------------------------------------------
-runner::runner()
-: m_stepper(200)
+Runner::Runner()
+: _stepper(200)
 {
     srand(0xa9e);
-    m_console.resize(80, 25);
+    _console.resize(80, 25);
 }
 
 //------------------------------------------------------------------------------
-void runner::go()
+void Runner::go()
 {
     ecma48_test();
     line_test();
 }
 
 //------------------------------------------------------------------------------
-bool runner::step()
+bool Runner::step()
 {
-    return m_stepper.step();
+    return _stepper.step();
 }
 
 //------------------------------------------------------------------------------
-void runner::ecma48_test()
+void Runner::ecma48_test()
 {
 #define CSI(x) "\x1b[" #x
-    terminal terminal = terminal_create();
-    terminal_out& output = *terminal.out;
+    Terminal terminal = terminal_create();
+    TerminalOut& output = *terminal.out;
     output.begin();
 
     // Clear screen after
@@ -319,9 +319,9 @@ void runner::ecma48_test()
 }
 
 //------------------------------------------------------------------------------
-void runner::line_test()
+void Runner::line_test()
 {
-    test_editor editor;
+    TestEditor editor;
 
 #if 1
     editor.start("prompt\n->$ ");
@@ -329,20 +329,20 @@ void runner::line_test()
     editor.start("prompt$ ");
 #endif // 0
     const char word[] = "9876543210";
-    for (int i = 0; i < 100;)
+    for (int32 i = 0; i < 100;)
     {
         editor.press_keys("_");
-        int j = rand() % (sizeof(word) - 2);
+        int32 j = rand() % (sizeof(word) - 2);
         editor.press_keys(word + j);
         i += sizeof(word) - j;
     }
 
-    int columns = m_console.get_columns();
+    int32 columns = _console.get_columns();
     for (; columns > 16 && step(); --columns)
-        m_console.resize(columns);
+        _console.resize(columns);
 
     for (; columns < 60 && step(); ++columns)
-        m_console.resize(columns);
+        _console.resize(columns);
 
     step();
     editor.end();
@@ -351,8 +351,8 @@ void runner::line_test()
 
 
 //------------------------------------------------------------------------------
-int draw_test(int, char**)
+int32 draw_test(int32, char**)
 {
-    runner().go();
+    Runner().go();
     return 0;
 }

@@ -1,67 +1,67 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 //------------------------------------------------------------------------------
-class linear_allocator
+class LinearAllocator
 {
 public:
-                          linear_allocator(int size);
-                          linear_allocator(void* buffer, int size);
-                          ~linear_allocator();
-    void*                 alloc(int size);
-    template <class T> T* calloc(int count=1);
+                          LinearAllocator(int32 size);
+                          LinearAllocator(void* buffer, int32 size);
+                          ~LinearAllocator();
+    void*                 alloc(int32 size);
+    template <class T> T* calloc(int32 count=1);
 
 private:
-    char*                 m_buffer;
-    int                   m_used;
-    int                   m_max;
-    bool                  m_owned;
+    char*                 _buffer;
+    int32                 _used;
+    int32                 _max;
+    bool                  _owned;
 };
 
 //------------------------------------------------------------------------------
-inline linear_allocator::linear_allocator(int size)
-: m_buffer((char*)malloc(size))
-, m_used(0)
-, m_max(size)
-, m_owned(true)
+inline LinearAllocator::LinearAllocator(int32 size)
+: _buffer((char*)malloc(size))
+, _used(0)
+, _max(size)
+, _owned(true)
 {
 }
 
 //------------------------------------------------------------------------------
-inline linear_allocator::linear_allocator(void* buffer, int size)
-: m_buffer((char*)buffer)
-, m_used(0)
-, m_max(size)
-, m_owned(false)
+inline LinearAllocator::LinearAllocator(void* buffer, int32 size)
+: _buffer((char*)buffer)
+, _used(0)
+, _max(size)
+, _owned(false)
 {
 }
 
 //------------------------------------------------------------------------------
-inline linear_allocator::~linear_allocator()
+inline LinearAllocator::~LinearAllocator()
 {
-    if (m_owned)
-        free(m_buffer);
+    if (_owned)
+        free(_buffer);
 }
 
 //------------------------------------------------------------------------------
-inline void* linear_allocator::alloc(int size)
+inline void* LinearAllocator::alloc(int32 size)
 {
     if (size == 0)
         return nullptr;
 
-    int used = m_used + size;
-    if (used > m_max)
+    int32 used = _used + size;
+    if (used > _max)
         return nullptr;
 
-    char* ptr = m_buffer + m_used;
-    m_used = used;
+    char* ptr = _buffer + _used;
+    _used = used;
     return ptr;
 }
 
 //------------------------------------------------------------------------------
-template <class T> T* linear_allocator::calloc(int count)
+template <class T> T* LinearAllocator::calloc(int32 count)
 {
     return (T*)(alloc(sizeof(T) * count));
 }

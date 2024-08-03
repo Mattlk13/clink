@@ -1,10 +1,10 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 //------------------------------------------------------------------------------
-class terminal_in
+class TerminalIn
 {
 public:
     enum {
@@ -14,9 +14,9 @@ public:
         input_terminal_resize,
     };
 
-    virtual         ~terminal_in() = default;
+    virtual         ~TerminalIn() = default;
     virtual void    begin() = 0;
     virtual void    end() = 0;
     virtual void    select() = 0;
-    virtual int     read() = 0;
+    virtual int32   read() = 0;
 };

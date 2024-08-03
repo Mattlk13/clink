@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -9,99 +9,99 @@
 #include <core/str_compare.h>
 
 //------------------------------------------------------------------------------
-match_builder::match_builder(matches& matches)
-: m_matches(matches)
+MatchBuilder::MatchBuilder(Matches& matches)
+: _matches(matches)
 {
 }
 
 //------------------------------------------------------------------------------
-bool match_builder::add_match(const char* match)
+bool MatchBuilder::add_match(const char* match)
 {
-    match_desc desc = { match };
+    MatchDesc desc = { match };
     return add_match(desc);
 }
 
 //------------------------------------------------------------------------------
-bool match_builder::add_match(const match_desc& desc)
+bool MatchBuilder::add_match(const MatchDesc& desc)
 {
-    return ((matches_impl&)m_matches).add_match(desc);
+    return ((MatchesImpl&)_matches).add_match(desc);
 }
 
 //------------------------------------------------------------------------------
-void match_builder::set_prefix_included(bool included)
+void MatchBuilder::set_prefix_included(bool included)
 {
-    return ((matches_impl&)m_matches).set_prefix_included(included);
+    return ((MatchesImpl&)_matches).set_prefix_included(included);
 }
 
 
 
 //------------------------------------------------------------------------------
-const char* match_store::get(unsigned int id) const
+const char* MatchStore::get(uint32 id) const
 {
     id <<= alignment_bits;
-    return (id < m_size) ? (m_ptr + id) : nullptr;
+    return (id < _size) ? (_ptr + id) : nullptr;
 }
 
 
 
 //------------------------------------------------------------------------------
-matches_impl::store_impl::store_impl(unsigned int size)
-: m_front(0)
-, m_back(size)
+MatchesImpl::StoreImpl::StoreImpl(uint32 size)
+: _front(0)
+, _back(size)
 {
-    m_size = size;
-    m_ptr = (char*)malloc(size);
+    _size = size;
+    _ptr = (char*)malloc(size);
 }
 
 //------------------------------------------------------------------------------
-matches_impl::store_impl::~store_impl()
+MatchesImpl::StoreImpl::~StoreImpl()
 {
-    free(m_ptr);
+    free(_ptr);
 }
 
 //------------------------------------------------------------------------------
-void matches_impl::store_impl::reset()
+void MatchesImpl::StoreImpl::reset()
 {
-    m_back = m_size;
-    m_front = 0;
+    _back = _size;
+    _front = 0;
 }
 
 //------------------------------------------------------------------------------
-int matches_impl::store_impl::store_front(const char* str)
+int32 MatchesImpl::StoreImpl::store_front(const char* str)
 {
-    unsigned int size = get_size(str);
-    unsigned int next = m_front + size;
-    if (next > m_back)
+    uint32 size = get_size(str);
+    uint32 next = _front + size;
+    if (next > _back)
         return -1;
 
-    str_base(m_ptr + m_front, size).copy(str);
+    StrBase(_ptr + _front, size).copy(str);
 
-    unsigned int ret = m_front;
-    m_front = next;
+    uint32 ret = _front;
+    _front = next;
     return ret >> alignment_bits;
 }
 
 //------------------------------------------------------------------------------
-int matches_impl::store_impl::store_back(const char* str)
+int32 MatchesImpl::StoreImpl::store_back(const char* str)
 {
-    unsigned int size = get_size(str);
-    unsigned int next = m_back - size;
-    if (next < m_front)
+    uint32 size = get_size(str);
+    uint32 next = _back - size;
+    if (next < _front)
         return -1;
 
-    m_back = next;
-    str_base(m_ptr + m_back, size).copy(str);
+    _back = next;
+    StrBase(_ptr + _back, size).copy(str);
 
-    return m_back >> alignment_bits;
+    return _back >> alignment_bits;
 }
 
 //------------------------------------------------------------------------------
-unsigned int matches_impl::store_impl::get_size(const char* str) const
+uint32 MatchesImpl::StoreImpl::get_size(const char* str) const
 {
     if (str == nullptr || str[0] == '\0')
         return ~0u;
 
-    int length = int(strlen(str) + 1);
+    int32 length = int32(strlen(str) + 1);
     length = (length + alignment - 1) & ~(alignment - 1);
     return length;
 }
@@ -109,96 +109,96 @@ unsigned int matches_impl::store_impl::get_size(const char* str) const
 
 
 //------------------------------------------------------------------------------
-matches_impl::matches_impl(unsigned int store_size)
-: m_store(min(store_size, 0x10000u))
+MatchesImpl::MatchesImpl(uint32 store_size)
+: _store(min(store_size, 0x10000u))
 {
-    m_infos.reserve(1024);
+    _infos.reserve(1023);
 }
 
 //------------------------------------------------------------------------------
-unsigned int matches_impl::get_info_count() const
+uint32 MatchesImpl::get_info_count() const
 {
-    return int(m_infos.size());
+    return int32(_infos.size());
 }
 
 //------------------------------------------------------------------------------
-match_info* matches_impl::get_infos()
+MatchInfo* MatchesImpl::get_infos()
 {
-    return &(m_infos[0]);
+    return &(_infos[0]);
 }
 
 //------------------------------------------------------------------------------
-const match_store& matches_impl::get_store() const
+const MatchStore& MatchesImpl::get_store() const
 {
-    return m_store;
+    return _store;
 }
 
 //------------------------------------------------------------------------------
-unsigned int matches_impl::get_match_count() const
+uint32 MatchesImpl::get_match_count() const
 {
-    return m_count;
+    return _count;
 }
 
 //------------------------------------------------------------------------------
-const char* matches_impl::get_match(unsigned int index) const
+const char* MatchesImpl::get_match(uint32 index) const
 {
     if (index >= get_match_count())
         return nullptr;
 
-    unsigned int store_id = m_infos[index].store_id;
-    return m_store.get(store_id);
+    uint32 store_id = _infos[index].store_id;
+    return _store.get(store_id);
 }
 
 //------------------------------------------------------------------------------
-const char* matches_impl::get_displayable(unsigned int index) const
+const char* MatchesImpl::get_displayable(uint32 index) const
 {
     if (index >= get_match_count())
         return nullptr;
 
-    unsigned int store_id = m_infos[index].displayable_store_id;
+    uint32 store_id = _infos[index].displayable_store_id;
     if (!store_id)
-        store_id = m_infos[index].store_id;
+        store_id = _infos[index].store_id;
 
-    return m_store.get(store_id);
+    return _store.get(store_id);
 }
 
 //------------------------------------------------------------------------------
-const char* matches_impl::get_aux(unsigned int index) const
+const char* MatchesImpl::get_aux(uint32 index) const
 {
     if (index >= get_match_count())
         return nullptr;
 
-    if (unsigned int store_id = m_infos[index].aux_store_id)
-        return m_store.get(store_id);
+    if (uint32 store_id = _infos[index].aux_store_id)
+        return _store.get(store_id);
 
     return nullptr;
 }
 
 //------------------------------------------------------------------------------
-char matches_impl::get_suffix(unsigned int index) const
+char MatchesImpl::get_suffix(uint32 index) const
 {
     if (index >= get_match_count())
         return 0;
 
-    return m_infos[index].suffix;
+    return _infos[index].suffix;
 }
 
 //------------------------------------------------------------------------------
-unsigned int matches_impl::get_cell_count(unsigned int index) const
+uint32 MatchesImpl::get_cell_count(uint32 index) const
 {
-    return (index < get_match_count()) ? m_infos[index].cell_count : 0;
+    return (index < get_match_count()) ? _infos[index].cell_count : 0;
 }
 
 //------------------------------------------------------------------------------
-bool matches_impl::has_aux() const
+bool MatchesImpl::has_aux() const
 {
-    return m_has_aux;
+    return _has_aux;
 }
 
 //------------------------------------------------------------------------------
-void matches_impl::get_match_lcd(str_base& out) const
+void MatchesImpl::get_match_lcd(StrBase& out) const
 {
-    int match_count = get_match_count();
+    int32 match_count = get_match_count();
 
     if (match_count <= 0)
         return;
@@ -210,15 +210,15 @@ void matches_impl::get_match_lcd(str_base& out) const
     }
 
     out = get_match(0);
-    int lcd_length = out.length();
+    int32 lcd_length = out.length();
 
-    int cmp_mode = str_compare_scope::current();
-    str_compare_scope _(min(cmp_mode, int(str_compare_scope::caseless)));
+    int32 cmp_mode = StrCompareScope::current();
+    StrCompareScope _(min(cmp_mode, int32(StrCompareScope::caseless)));
 
-    for (int i = 1, n = get_match_count(); i < n; ++i)
+    for (int32 i = 1, n = get_match_count(); i < n; ++i)
     {
         const char* match = get_match(i);
-        int d = str_compare(match, out.c_str());
+        int32 d = str_compare(match, out.c_str());
         if (d >= 0)
             lcd_length = min(d, lcd_length);
     }
@@ -227,79 +227,79 @@ void matches_impl::get_match_lcd(str_base& out) const
 }
 
 //------------------------------------------------------------------------------
-bool matches_impl::is_prefix_included() const
+bool MatchesImpl::is_prefix_included() const
 {
-    return m_prefix_included;
+    return _prefix_included;
 }
 
 //------------------------------------------------------------------------------
-void matches_impl::reset()
+void MatchesImpl::reset()
 {
-    m_store.reset();
-    m_infos.clear();
-    m_coalesced = false;
-    m_count = 0;
-    m_has_aux = false;
-    m_prefix_included = false;
+    _store.reset();
+    _infos.clear();
+    _coalesced = false;
+    _count = 0;
+    _has_aux = false;
+    _prefix_included = false;
 }
 
 //------------------------------------------------------------------------------
-void matches_impl::set_prefix_included(bool included)
+void MatchesImpl::set_prefix_included(bool included)
 {
-    m_prefix_included = included;
+    _prefix_included = included;
 }
 
 //------------------------------------------------------------------------------
-bool matches_impl::add_match(const match_desc& desc)
+bool MatchesImpl::add_match(const MatchDesc& desc)
 {
     const char* match = desc.match;
 
-    if (m_coalesced || match == nullptr || !*match)
+    if (_coalesced || match == nullptr || !*match)
         return false;
 
-    int store_id = m_store.store_front(match);
+    int32 store_id = _store.store_front(match);
     if (store_id < 0)
         return false;
 
-    int displayable_store_id = 0;
+    int32 displayable_store_id = 0;
     if (desc.displayable != nullptr)
-        displayable_store_id = max(0, m_store.store_back(desc.displayable));
+        displayable_store_id = max(0, _store.store_back(desc.displayable));
 
-    int aux_store_id = 0;
-    if (m_has_aux = (desc.aux != nullptr))
-        aux_store_id = max(0, m_store.store_back(desc.aux));
+    int32 aux_store_id = 0;
+    if (_has_aux = (desc.aux != nullptr))
+        aux_store_id = max(0, _store.store_back(desc.aux));
 
-    m_infos.push_back({
-        (unsigned short)store_id,
-        (unsigned short)displayable_store_id,
-        (unsigned short)aux_store_id,
+    _infos.push_back({
+        (uint16)store_id,
+        (uint16)displayable_store_id,
+        (uint16)aux_store_id,
         0,
-        max<unsigned char>(0, desc.suffix),
+        max<uint8>(0, desc.suffix),
     });
-    ++m_count;
+    ++_count;
     return true;
 }
 
 //------------------------------------------------------------------------------
-void matches_impl::coalesce(unsigned int count_hint)
+void MatchesImpl::coalesce(uint32 count_hint)
 {
-    match_info* infos = &(m_infos[0]);
+    MatchInfo* infos = &(_infos[0]);
 
-    unsigned int j = 0;
-    for (int i = 0, n = int(m_infos.size()); i < n && j < count_hint; ++i)
+    uint32 j = 0;
+    for (int32 i = 0, n = int32(_infos.size()); i < n && j < count_hint; ++i)
     {
         if (!infos[i].select)
             continue;
 
         if (i != j)
         {
-            match_info temp = infos[j];
+            MatchInfo temp = infos[j];
             infos[j] = infos[i];
             infos[i] = temp;
         }
         ++j;
     }
 
-    m_count = j;
-    m_coalesced = true;
+    _count = j;
+    _coalesced = true;
 }

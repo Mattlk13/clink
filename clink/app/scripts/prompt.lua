@@ -1,4 +1,4 @@
--- Copyright (c) 2016 Martin Ridgers
+-- Copyright (c) Martin Ridgers
 -- License: http://opensource.org/licenses/MIT
 
 --------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ function clink._filter_prompt(prompt)
         print("")
         print(ret)
         print(debug.traceback())
-        return false
+        return "\nPROMPT_LUA_ERROR>"
     end
 
     return ret

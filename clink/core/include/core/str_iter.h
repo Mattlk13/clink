@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -7,59 +7,59 @@
 
 //------------------------------------------------------------------------------
 template <typename T>
-class str_iter_impl
+class StrIterImpl
 {
 public:
-    explicit        str_iter_impl(const T* s=(const T*)L"", int len=-1);
-    explicit        str_iter_impl(const str_impl<T>& s, int len=-1);
+    explicit        StrIterImpl(const T* s=(const T*)L"", int32 len=-1);
+    explicit        StrIterImpl(const StrImpl<T>& s, int32 len=-1);
     const T*        get_pointer() const;
-    int             peek();
-    int             next();
+    int32           peek();
+    int32           next();
     bool            more() const;
-    unsigned int    length() const;
+    uint32          length() const;
 
 private:
-    const T*        m_ptr;
-    const T*        m_end;
+    const T*        _ptr;
+    const T*        _end;
 };
 
 //------------------------------------------------------------------------------
-template <typename T> str_iter_impl<T>::str_iter_impl(const T* s, int len)
-: m_ptr(s)
-, m_end(m_ptr + len)
+template <typename T> StrIterImpl<T>::StrIterImpl(const T* s, int32 len)
+: _ptr(s)
+, _end(_ptr + len)
 {
 }
 
 //------------------------------------------------------------------------------
-template <typename T> str_iter_impl<T>::str_iter_impl(const str_impl<T>& s, int len)
-: m_ptr(s.c_str())
-, m_end(m_ptr + len)
+template <typename T> StrIterImpl<T>::StrIterImpl(const StrImpl<T>& s, int32 len)
+: _ptr(s.c_str())
+, _end(_ptr + len)
 {
 }
 
 //------------------------------------------------------------------------------
-template <typename T> const T* str_iter_impl<T>::get_pointer() const
+template <typename T> const T* StrIterImpl<T>::get_pointer() const
 {
-    return m_ptr;
+    return _ptr;
 };
 
 //------------------------------------------------------------------------------
-template <typename T> int str_iter_impl<T>::peek()
+template <typename T> int32 StrIterImpl<T>::peek()
 {
-    const T* ptr = m_ptr;
-    int ret = next();
-    m_ptr = ptr;
+    const T* ptr = _ptr;
+    int32 ret = next();
+    _ptr = ptr;
     return ret;
 }
 
 //------------------------------------------------------------------------------
-template <typename T> bool str_iter_impl<T>::more() const
+template <typename T> bool StrIterImpl<T>::more() const
 {
-    return (m_ptr != m_end && *m_ptr != '\0');
+    return (_ptr != _end && *_ptr != '\0');
 }
 
 
 
 //------------------------------------------------------------------------------
-typedef str_iter_impl<char>     str_iter;
-typedef str_iter_impl<wchar_t>  wstr_iter;
+typedef StrIterImpl<char>       StrIter;
+typedef StrIterImpl<wchar_t>    WstrIter;

@@ -1,64 +1,64 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 #include <Windows.h>
 
-class str_base;
+class StrBase;
 
 //------------------------------------------------------------------------------
-class process
+class Process
 {
 public:
-    enum arch { arch_unknown, arch_x86, arch_x64 };
+    enum Arch { arch_unknown, arch_x86, arch_x64 };
 
-                                process(int pid=-1);
-    int                         get_pid() const;
-    bool                        get_file_name(str_base& out) const;
-    arch                        get_arch() const;
-    int                         get_parent_pid() const;
+                                Process(int32 pid=-1);
+    int32                       get_pid() const;
+    bool                        get_file_name(StrBase& out) const;
+    Arch                        get_arch() const;
+    int32                       get_parent_pid() const;
     void*                       inject_module(const char* dll);
     template <typename T> void* remote_call(void* function, T const& param);
     void                        pause();
     void                        unpause();
 
 private:
-    void*                       remote_call(void* function, const void* param, int param_size);
+    void*                       remote_call(void* function, const void* param, int32 param_size);
     void                        pause(bool suspend);
-    int                         m_pid;
+    int32                       _pid;
 
-    struct handle
+    struct Handle
     {
-        handle(HANDLE h) : m_handle(h)  {}
-        ~handle()                       { CloseHandle(m_handle); }
-        explicit operator bool () const { return (m_handle != nullptr && m_handle != INVALID_HANDLE_VALUE); }
-        operator HANDLE () const        { return m_handle; }
-        HANDLE m_handle;
+        Handle(HANDLE h) : _handle(h)  {}
+        ~Handle()                       { CloseHandle(_handle); }
+        explicit operator bool () const { return (_handle != nullptr && _handle != INVALID_HANDLE_VALUE); }
+        operator HANDLE () const        { return _handle; }
+        HANDLE _handle;
     };
 };
 
 //------------------------------------------------------------------------------
-inline int process::get_pid() const
+inline int32 Process::get_pid() const
 {
-    return m_pid;
+    return _pid;
 }
 
 //------------------------------------------------------------------------------
 template <typename T>
-void* process::remote_call(void* function, T const& param)
+void* Process::remote_call(void* function, T const& param)
 {
     return remote_call(function, &param, sizeof(param));
 }
 
 //------------------------------------------------------------------------------
-inline void process::pause()
+inline void Process::pause()
 {
     pause(true);
 }
 
 //------------------------------------------------------------------------------
-inline void process::unpause()
+inline void Process::unpause()
 {
     pause(false);
 }

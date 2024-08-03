@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -11,24 +11,24 @@
 #include <process/vm.h>
 
 //------------------------------------------------------------------------------
-hook_setter::hook_setter()
-: m_desc_count(0)
+HookSetter::HookSetter()
+: _desc_count(0)
 {
 }
 
 //------------------------------------------------------------------------------
-int hook_setter::commit()
+int32 HookSetter::commit()
 {
     // Each hook needs fixing up, so we find the base address of our module.
-    void* self = vm().get_alloc_base("clink");
+    void* self = Vm().get_alloc_base("clink");
     if (self == nullptr)
         return 0;
 
     // Apply all the hooks add to the setter.
-    int success = 0;
-    for (int i = 0; i < m_desc_count; ++i)
+    int32 success = 0;
+    for (int32 i = 0; i < _desc_count; ++i)
     {
-        const hook_desc& desc = m_descs[i];
+        const HookDesc& desc = _descs[i];
         switch (desc.type)
         {
         case hook_type_iat_by_name: success += !!commit_iat(self, desc);  break;
@@ -40,27 +40,27 @@ int hook_setter::commit()
 }
 
 //------------------------------------------------------------------------------
-hook_setter::hook_desc* hook_setter::add_desc(
-    hook_type type,
+HookSetter::HookDesc* HookSetter::add_desc(
+    HookType type,
     void* module,
     const char* name,
     funcptr_t hook)
 {
-    if (m_desc_count >= sizeof_array(m_descs))
+    if (_desc_count >= sizeof_array(_descs))
         return nullptr;
 
-    hook_desc& desc = m_descs[m_desc_count];
+    HookDesc& desc = _descs[_desc_count];
     desc.type = type;
     desc.module = module;
     desc.hook = hook;
     desc.name = name;
 
-    ++m_desc_count;
+    ++_desc_count;
     return &desc;
 }
 
 //------------------------------------------------------------------------------
-bool hook_setter::commit_iat(void* self, const hook_desc& desc)
+bool HookSetter::commit_iat(void* self, const HookDesc& desc)
 {
     funcptr_t addr = hook_iat(desc.module, nullptr, desc.name, desc.hook, 1);
     if (addr == nullptr)
@@ -82,10 +82,10 @@ bool hook_setter::commit_iat(void* self, const hook_desc& desc)
 }
 
 //------------------------------------------------------------------------------
-bool hook_setter::commit_jmp(void* self, const hook_desc& desc)
+bool HookSetter::commit_jmp(void* self, const HookDesc& desc)
 {
     // Hook into a DLL's import by patching the start of the function. 'addr' is
-    // the trampoline that can be used to call the original. This method doesn't
+    // the Trampoline that can be used to call the original. This method doesn't
     // use the IAT.
 
     auto* addr = hook_jmp(desc.module, desc.name, desc.hook);
@@ -95,7 +95,7 @@ bool hook_setter::commit_jmp(void* self, const hook_desc& desc)
         return false;
     }
 
-    // Patch our own IAT with the address of a trampoline so out use of this
+    // Patch our own IAT with the address of a Trampoline so out use of this
     // function calls the original.
     if (hook_iat(self, nullptr, desc.name, addr, 1) == 0)
     {

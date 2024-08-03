@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -8,59 +8,59 @@
 #include <core/str.h>
 
 //------------------------------------------------------------------------------
-printer::printer(terminal_out& terminal)
-: m_terminal(terminal)
-, m_set_attr(attributes::defaults)
-, m_next_attr(attributes::defaults)
+Printer::Printer(TerminalOut& terminal)
+: _terminal(terminal)
+, _set_attr(Attributes::defaults)
+, _next_attr(Attributes::defaults)
 {
 }
 
 //------------------------------------------------------------------------------
-void printer::print(const char* data, int bytes)
+void Printer::print(const char* data, int32 bytes)
 {
     if (bytes <= 0)
         return;
 
-    if (m_next_attr != m_set_attr)
+    if (_next_attr != _set_attr)
         flush_attributes();
 
-    m_terminal.write(data, bytes);
+    _terminal.write(data, bytes);
 }
 
 //------------------------------------------------------------------------------
-void printer::print(const attributes attr, const char* data, int bytes)
+void Printer::print(const Attributes attr, const char* data, int32 bytes)
 {
-    attributes prev_attr = set_attributes(attr);
+    Attributes prev_attr = set_attributes(attr);
     print(data, bytes);
     set_attributes(prev_attr);
 }
 
 //------------------------------------------------------------------------------
-unsigned int printer::get_columns() const
+uint32 Printer::get_columns() const
 {
-    return m_terminal.get_columns();
+    return _terminal.get_columns();
 }
 
 //------------------------------------------------------------------------------
-unsigned int printer::get_rows() const
+uint32 Printer::get_rows() const
 {
-    return m_terminal.get_rows();
+    return _terminal.get_rows();
 }
 
 //------------------------------------------------------------------------------
-attributes printer::set_attributes(const attributes attr)
+Attributes Printer::set_attributes(const Attributes attr)
 {
-    attributes prev_attr = m_next_attr;
-    m_next_attr = attributes::merge(m_next_attr, attr);
+    Attributes prev_attr = _next_attr;
+    _next_attr = Attributes::merge(_next_attr, attr);
     return prev_attr;
 }
 
 //------------------------------------------------------------------------------
-void printer::flush_attributes()
+void Printer::flush_attributes()
 {
-    attributes diff = attributes::diff(m_set_attr, m_next_attr);
+    Attributes diff = Attributes::diff(_set_attr, _next_attr);
 
-    str<64, false> params;
+    Str<64, false> params;
     auto add_param = [&] (const char* x) {
         if (!params.empty())
             params << ";";
@@ -110,37 +110,37 @@ void printer::flush_attributes()
 
     if (!params.empty())
     {
-        m_terminal.write("\x1b[");
-        m_terminal.write(params.c_str(), params.length());
-        m_terminal.write("m");
+        _terminal.write("\x1b[");
+        _terminal.write(params.c_str(), params.length());
+        _terminal.write("m");
     }
 
-    m_set_attr = m_next_attr;
+    _set_attr = _next_attr;
 }
 
 //------------------------------------------------------------------------------
-attributes printer::get_attributes() const
+Attributes Printer::get_attributes() const
 {
-    return m_next_attr;
+    return _next_attr;
 }
 
 //------------------------------------------------------------------------------
-void printer::insert(int count)
-{
-}
-
-//------------------------------------------------------------------------------
-void printer::move_cursor(int dc, int dr)
+void Printer::insert(int32 count)
 {
 }
 
 //------------------------------------------------------------------------------
-void printer::set_cursor(cursor_state state)
+void Printer::move_cursor(int32 dc, int32 dr)
 {
 }
 
 //------------------------------------------------------------------------------
-printer::cursor_state printer::get_cursor() const
+void Printer::set_cursor(CursorState state)
+{
+}
+
+//------------------------------------------------------------------------------
+Printer::CursorState Printer::get_cursor() const
 {
     return 0;
 }

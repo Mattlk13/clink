@@ -1,4 +1,4 @@
--- Copyright (c) 2012 Martin Ridgers
+-- Copyright (c) Martin Ridgers
 -- License: http://opensource.org/licenses/MIT
 
 --------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ newaction {
     trigger = "release",
     description = "Creates a release of Clink.",
     execute = function ()
-        local premake = _PREMAKE_COMMAND
+        local premake = '"'.._PREMAKE_COMMAND..'"'
         local root_dir = path.getabsolute(".build/release").."/"
 
         -- Check we have the tools we need.
@@ -97,7 +97,7 @@ newaction {
             if have_msbuild then
                 target = target or "build"
 
-                toolchain = _OPTIONS["vsver"] or "vs2013"
+                toolchain = "vs"..(_OPTIONS["vsver"] or "2019")
                 exec(premake .. " " .. toolchain)
                 os.chdir(".build/" .. toolchain)
 

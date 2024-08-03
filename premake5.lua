@@ -1,4 +1,4 @@
--- Copyright (c) 2012 Martin Ridgers
+-- Copyright (c) Martin Ridgers
 -- License: http://opensource.org/licenses/MIT
 
 local to = ".build/"..(_ACTION or "nullaction")
@@ -87,7 +87,7 @@ workspace("clink")
 
     characterset("MBCS")
     flags("NoManifest")
-    flags("StaticRuntime")
+    staticruntime("on")
     rtti("off")
     symbols("on")
     exceptionhandling("off")
@@ -104,7 +104,7 @@ workspace("clink")
 
     configuration("final")
         optimize("full")
-        flags("NoFramePointer")
+        omitframepointer("on")
         flags("NoBufferSecurityCheck")
 
     configuration({"final", "vs*"})
@@ -307,12 +307,14 @@ clink_exe("clink_test")
     includedirs("clink/lib/include/lib")
     includedirs("clink/lib/src")
     includedirs("clink/lua/include")
+    includedirs("clink/process/include")
     includedirs("clink/terminal/include")
     includedirs("lua/src")
     files("clink/app/test/*.cpp")
     files("clink/core/test/*.cpp")
     files("clink/lua/test/*.cpp")
     files("clink/lib/test/*.cpp")
+    files("clink/process/test/*.cpp")
     files("clink/terminal/test/*.cpp")
     files("clink/test/**")
 

@@ -1,15 +1,15 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
 
 //------------------------------------------------------------------------------
-class seh_scope
+class SehScope
 {
 public:
-                seh_scope();
-                ~seh_scope();
+                SehScope();
+                ~SehScope();
 
 private:
-    void*       m_prev_filter;
+    void*       _prev_filter;
 };

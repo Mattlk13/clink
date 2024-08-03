@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #pragma once
@@ -6,23 +6,23 @@
 struct lua_State;
 
 //------------------------------------------------------------------------------
-class lua_state
+class LuaState
 {
 public:
-                    lua_state();
-                    ~lua_state();
+                    LuaState();
+                    ~LuaState();
     void            initialise();
     void            shutdown();
-    bool            do_string(const char* string, int length=-1);
+    bool            do_string(const char* string, int32 length=-1);
     bool            do_file(const char* path);
     lua_State*      get_state() const;
 
 private:
-    lua_State*      m_state;
+    lua_State*      _state;
 };
 
 //------------------------------------------------------------------------------
-inline lua_State* lua_state::get_state() const
+inline lua_State* LuaState::get_state() const
 {
-    return m_state;
+    return _state;
 }

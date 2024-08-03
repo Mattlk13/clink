@@ -1,4 +1,4 @@
-// Copyright (c) 2013 Martin Ridgers
+// Copyright (c) Martin Ridgers
 // License: http://opensource.org/licenses/MIT
 
 #include "pch.h"
@@ -27,49 +27,49 @@ const wchar_t* g_prompt_tags[]       = { g_prompt_tag_hidden, g_prompt_tag };
 
 
 //------------------------------------------------------------------------------
-prompt::prompt()
-: m_data(nullptr)
+Prompt::Prompt()
+: _data(nullptr)
 {
 }
 
 //------------------------------------------------------------------------------
-prompt::prompt(prompt&& rhs)
-: m_data(nullptr)
+Prompt::Prompt(Prompt&& rhs)
+: _data(nullptr)
 {
-    std::swap(m_data, rhs.m_data);
+    std::swap(_data, rhs._data);
 }
 
 //------------------------------------------------------------------------------
-prompt::~prompt()
+Prompt::~Prompt()
 {
     clear();
 }
 
 //------------------------------------------------------------------------------
-prompt& prompt::operator = (prompt&& rhs)
+Prompt& Prompt::operator = (Prompt&& rhs)
 {
     clear();
-    std::swap(m_data, rhs.m_data);
+    std::swap(_data, rhs._data);
     return *this;
 }
 
 //------------------------------------------------------------------------------
-void prompt::clear()
+void Prompt::clear()
 {
-    if (m_data != nullptr)
-        free(m_data);
+    if (_data != nullptr)
+        free(_data);
 
-    m_data = nullptr;
+    _data = nullptr;
 }
 
 //------------------------------------------------------------------------------
-const wchar_t* prompt::get() const
+const wchar_t* Prompt::get() const
 {
-    return m_data;
+    return _data;
 }
 
 //------------------------------------------------------------------------------
-void prompt::set(const wchar_t* chars, int char_count)
+void Prompt::set(const wchar_t* chars, int32 char_count)
 {
     clear();
 
@@ -77,61 +77,61 @@ void prompt::set(const wchar_t* chars, int char_count)
         return;
 
     if (char_count <= 0)
-        char_count = int(wcslen(chars));
+        char_count = int32(wcslen(chars));
 
-    m_data = (wchar_t*)malloc(sizeof(*m_data) * (char_count + 1));
-    wcsncpy(m_data, chars, char_count);
-    m_data[char_count] = '\0';
+    _data = (wchar_t*)malloc(sizeof(*_data) * (char_count + 1));
+    wcsncpy(_data, chars, char_count);
+    _data[char_count] = '\0';
 }
 
 //------------------------------------------------------------------------------
-bool prompt::is_set() const
+bool Prompt::is_set() const
 {
-    return (m_data != nullptr);
+    return (_data != nullptr);
 }
 
 
 
 //------------------------------------------------------------------------------
-void tagged_prompt::set(const wchar_t* chars, int char_count)
+void TaggedPrompt::set(const wchar_t* chars, int32 char_count)
 {
     clear();
 
-    if (int tag_length = is_tagged(chars, char_count))
-        prompt::set(chars + tag_length, char_count - tag_length);
+    if (int32 tag_length = is_tagged(chars, char_count))
+        Prompt::set(chars + tag_length, char_count - tag_length);
 }
 
 //------------------------------------------------------------------------------
-void tagged_prompt::tag(const wchar_t* value)
+void TaggedPrompt::tag(const wchar_t* value)
 {
     clear();
 
     // Just set 'value' if it is already tagged.
     if (is_tagged(value))
     {
-        prompt::set(value);
+        Prompt::set(value);
         return;
     }
 
-    int length = int(wcslen(value));
-    length += int(wcslen(g_prompt_tag_hidden));
+    int32 length = int32(wcslen(value));
+    length += int32(wcslen(g_prompt_tag_hidden));
 
-    m_data = (wchar_t*)malloc(sizeof(*m_data) * (length + 1));
-    wcscpy(m_data, g_prompt_tag_hidden);
-    wcscat(m_data, value);
+    _data = (wchar_t*)malloc(sizeof(*_data) * (length + 1));
+    wcscpy(_data, g_prompt_tag_hidden);
+    wcscat(_data, value);
 }
 
 //------------------------------------------------------------------------------
-int tagged_prompt::is_tagged(const wchar_t* chars, int char_count)
+int32 TaggedPrompt::is_tagged(const wchar_t* chars, int32 char_count)
 {
     if (char_count <= 0)
-        char_count = int(wcslen(chars));
+        char_count = int32(wcslen(chars));
 
     // For each accepted tag...
-    for (int i = 0; i < sizeof_array(g_prompt_tags); ++i)
+    for (int32 i = 0; i < sizeof_array(g_prompt_tags); ++i)
     {
         const wchar_t* tag = g_prompt_tags[i];
-        int tag_length = (int)wcslen(tag);
+        int32 tag_length = (int32)wcslen(tag);
 
         if (tag_length > char_count)
             continue;
@@ -147,16 +147,16 @@ int tagged_prompt::is_tagged(const wchar_t* chars, int char_count)
 
 
 //------------------------------------------------------------------------------
-prompt_filter::prompt_filter(lua_state& lua)
-: m_lua(lua)
+PromptFilter::PromptFilter(LuaState& lua)
+: _lua(lua)
 {
     lua_load_script(lua, app, prompt);
 }
 
 //------------------------------------------------------------------------------
-void prompt_filter::filter(const char* in, str_base& out)
+void PromptFilter::filter(const char* in, StrBase& out)
 {
-    lua_State* state = m_lua.get_state();
+    lua_State* state = _lua.get_state();
 
     // Call Lua to filter prompt
     lua_getglobal(state, "clink");
@@ -182,32 +182,32 @@ void prompt_filter::filter(const char* in, str_base& out)
 
 
 //------------------------------------------------------------------------------
-prompt prompt_utils::extract_from_console()
+Prompt PromptUtils::extract_from_console()
 {
     // Find where the cursor is. This will be the end of the prompt to extract.
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (GetConsoleScreenBufferInfo(handle, &csbi) == FALSE)
-        return prompt();
+        return Prompt();
 
     // Work out prompt length.
     COORD cursorXy = csbi.dwCursorPosition;
-    unsigned int length = cursorXy.X;
+    uint32 length = cursorXy.X;
     cursorXy.X = 0;
 
     wchar_t buffer[256] = {};
     if (length >= sizeof_array(buffer))
-        return prompt();
+        return Prompt();
 
     // Get the prompt from the terminal.
     DWORD chars_in;
     if (!ReadConsoleOutputCharacterW(handle, buffer, length, cursorXy, &chars_in))
-        return prompt();
+        return Prompt();
 
     buffer[chars_in] = '\0';
 
     // Wrap in a prompt object and return.
-    prompt ret;
+    Prompt ret;
     ret.set(buffer);
     return ret;
 }
